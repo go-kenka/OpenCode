@@ -31,13 +31,15 @@ OpenCode Android Client 是一个基于 Jetpack Compose 的 OpenCode 移动端�
 
 ## Screenshots
 
-<img src="screenshots/01_服务器设置_preview.png" width="300"/>
-<img src="screenshots/02_会话记录_preview.png" width="300"/>
-<img src="screenshots/03_模型选择_preview.png" width="300"/>
-<img src="screenshots/04_消息1_preview.png" width="300"/>
-<img src="screenshots/05_消息2_preview.png" width="300"/>
-<img src="screenshots/06_消息3_preview.png" width="300"/>
-<img src="screenshots/07_主页_preview.png" width="300"/>
+<p align="left">
+  <img src="screenshots/01_服务器设置_preview.png" width="220"/>
+  <img src="screenshots/02_会话记录_preview.png" width="220"/>
+  <img src="screenshots/03_模型选择_preview.png" width="220"/>
+  <img src="screenshots/04_消息1_preview.png" width="220"/>
+  <img src="screenshots/05_消息2_preview.png" width="220"/>
+  <img src="screenshots/06_消息3_preview.png" width="220"/>
+  <img src="screenshots/07_主页_preview.png" width="220"/>
+</p>
 
 ## 测试
 
