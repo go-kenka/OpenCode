@@ -1,4 +1,4 @@
-<img src="screenshots/opencodelogo.png"/>
+<img src="screenshots/opencode-wordmark-light.png"/>
 
 # OpenCode Android Client
 
