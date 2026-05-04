@@ -29,7 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import com.github.go_kenka.opencode.R
 
 @Composable
-fun JetchatIcon(contentDescription: String?, modifier: Modifier = Modifier) {
+fun OpenCodeIcon(contentDescription: String?, modifier: Modifier = Modifier) {
     val semantics = if (contentDescription != null) {
         Modifier.semantics {
             this.contentDescription = contentDescription

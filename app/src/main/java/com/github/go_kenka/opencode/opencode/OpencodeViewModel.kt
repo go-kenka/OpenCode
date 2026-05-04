@@ -69,6 +69,10 @@ class OpencodeViewModel(
     val uiState: StateFlow<OpenCodeUiState> = _uiState.asStateFlow()
 
     init {
+        val manualServices = preferences.getManualServices()
+        if (manualServices.isNotEmpty()) {
+            _uiState.update { it.copy(discoveredServices = manualServices) }
+        }
         observeDiscovery()
     }
 
@@ -91,7 +95,12 @@ class OpencodeViewModel(
         connectJob?.cancel()
         sessions = emptyList()
         sessionTodoCache.clear()
-        _uiState.value = OpenCodeUiState()
+        val manualServices = preferences.getManualServices()
+        _uiState.value = OpenCodeUiState(
+            discoveredServices = manualServices,
+            discoveryStatus = "正在重新发现 OpenCode 服务...",
+            isConnecting = true,
+        )
         discovery.stop()
         startDiscovery()
     }
@@ -112,6 +121,35 @@ class OpencodeViewModel(
         connectToService(service)
     }
 
+    fun saveManualService(service: OpenCodeService, originalKey: String? = null) {
+        val state = _uiState.value
+        val existing = state.discoveredServices.toMutableList()
+        val edited = existing.mapNotNull { candidate ->
+            if (originalKey != null && candidate.key() == originalKey) {
+                null
+            } else {
+                candidate
+            }
+        }
+        val merged = (edited + service).distinctBy { it.key() }
+        preferences.saveManualServices(merged)
+        _uiState.update { it.copy(discoveredServices = merged) }
+    }
+
+    fun deleteManualService(service: OpenCodeService) {
+        val state = _uiState.value
+        val updated = state.discoveredServices.filterNot { it.key() == service.key() }
+        preferences.saveManualServices(updated)
+        _uiState.update {
+            val clearCurrent = it.service?.key() == service.key()
+            it.copy(
+                discoveredServices = updated,
+                service = if (clearCurrent) null else it.service,
+                healthVersion = if (clearCurrent) null else it.healthVersion,
+            )
+        }
+    }
+
     fun confirmSelectedService() {
         val selected = _uiState.value.pendingService ?: _uiState.value.discoveredServices.firstOrNull() ?: return
         selectService(selected)
@@ -128,6 +166,7 @@ class OpencodeViewModel(
                     .sortedByDescending { it.time }
                 val selected = enrichProjectWithVcs(service, project.withSession(created))
                 val history = resolveHistoryMessages(service, selected)
+                syncSessionTodos(service, selected)
                 selected to history
             }.onSuccess { (selected, history) ->
                 val restored = resolveSelectionForContext(
@@ -184,6 +223,7 @@ class OpencodeViewModel(
             runCatching {
                 val selected = enrichProjectWithVcs(service, project.withSession(resolveSessionForProject(service, project)))
                 val history = resolveHistoryMessages(service, selected)
+                syncSessionTodos(service, selected)
                 selected to history
             }.onSuccess { (selected, history) ->
                 val restored = resolveSelectionForContext(
@@ -424,6 +464,7 @@ class OpencodeViewModel(
                 val baseProject = resolveProjectForSession(session)
                 val selected = enrichProjectWithVcs(service, baseProject.withSession(session))
                 val history = resolveHistoryMessages(service, selected)
+                syncSessionTodos(service, selected)
                 selected to history
             }.onSuccess { (selected, history) ->
                 val updatedLocalProjects = (_uiState.value.localProjects + selected.copy(isLocalOnly = true))
@@ -486,6 +527,10 @@ class OpencodeViewModel(
         val prompt = text.trim()
         if (prompt.isBlank()) return
         if (_uiState.value.isSending) return
+        if (prompt.matches(Regex("^/new\\s*$"))) {
+            createNewSession()
+            return
+        }
 
         val state = _uiState.value
         val service = state.service ?: return appendError("尚未发现 OpenCode 服务")
@@ -500,6 +545,7 @@ class OpencodeViewModel(
             id = UUID.randomUUID().toString(),
             role = "assistant",
             content = "",
+            reasoningCompleted = false,
         )
         _uiState.update {
             it.copy(
@@ -535,7 +581,7 @@ class OpencodeViewModel(
                 )
                 val assistantMessage = if (prompt.startsWith("/")) {
                     val segments = prompt.split(Regex("\\s+")).filter { it.isNotBlank() }
-                    val command = segments.first()
+                    val command = segments.first().removePrefix("/")
                     client.executeCommand(
                         baseUrl = service.baseUrl,
                         sessionId = session.id,
@@ -576,7 +622,26 @@ class OpencodeViewModel(
                                 current.copy(
                                     messages = current.messages.map { message ->
                                         if (message.id == assistantPlaceholder.id) {
-                                            message.copy(content = message.content + delta)
+                                            message.copy(
+                                                content = message.content + delta,
+                                            )
+                                        } else {
+                                            message
+                                        }
+                                    },
+                                )
+                            }
+                            preferences.saveSessionMessages(service.key(), session.id, _uiState.value.messages)
+                        },
+                        onReasoningUpdated = { reasoning ->
+                            _uiState.update { current ->
+                                current.copy(
+                                    messages = current.messages.map { message ->
+                                        if (message.id == assistantPlaceholder.id) {
+                                            message.copy(
+                                                reasoningContent = reasoning,
+                                                reasoningCompleted = false,
+                                            )
                                         } else {
                                             message
                                         }
@@ -597,6 +662,8 @@ class OpencodeViewModel(
                                     message.copy(
                                         id = assistantMessage.id.ifBlank { assistantPlaceholder.id },
                                         content = assistantMessage.content.ifBlank { message.content },
+                                        reasoningContent = assistantMessage.reasoningContent.ifBlank { message.reasoningContent },
+                                        reasoningCompleted = true,
                                         role = "assistant",
                                     )
                                 } else {
@@ -814,7 +881,9 @@ class OpencodeViewModel(
             }
 
             runCatching {
-                if (!client.health(service.baseUrl)) error("OpenCode 服务健康检查失败")
+                client.setBasicAuth(service.username, service.password)
+                val health = client.health(service.baseUrl)
+                if (!health.healthy) error("OpenCode 服务健康检查失败")
                 sessions = client.listSessions(service.baseUrl)
                 val sessionProjects = OpenCodeProject.fromSessions(sessions).map { it.copy(isLocalOnly = true) }
                 val savedLocalProjects = preferences.getLocalProjects(service.key())
@@ -831,6 +900,7 @@ class OpencodeViewModel(
                 val models = client.listModels(service.baseUrl)
                 val modes = client.listAgents(service.baseUrl)
                 val history = resolveHistoryMessages(service, selectedWithVcs)
+                syncSessionTodos(service, selectedWithVcs)
                 val selection = resolveSelectionForContext(service, selectedWithVcs, models, modes)
                 SessionConnectData(
                     projects = projects,
@@ -839,6 +909,7 @@ class OpencodeViewModel(
                     models = models,
                     modes = modes,
                     messages = history,
+                    healthVersion = health.version,
                     selection = selection,
                 )
             }.onSuccess { data ->
@@ -861,6 +932,7 @@ class OpencodeViewModel(
                         models = data.models,
                         selectedModel = data.selection.model,
                         selectedThinkingLevel = data.selection.thinkingLevel,
+                        healthVersion = data.healthVersion,
                         discoveryStatus = "已连接 ${service.serviceName}",
                         isConnecting = false,
                         isHistoryLoading = false,
@@ -930,6 +1002,17 @@ class OpencodeViewModel(
             .ifEmpty { localHistory }
     }
 
+    private suspend fun syncSessionTodos(
+        service: OpenCodeService,
+        project: OpenCodeProject?,
+    ) {
+        val sessionId = project?.sessionId ?: return
+        val todos = runCatching {
+            client.listSessionTodos(service.baseUrl, sessionId, project.directory)
+        }.getOrElse { emptyList() }
+        sessionTodoCache[sessionId] = todos
+    }
+
     private suspend fun enrichProjectWithVcs(
         service: OpenCodeService,
         project: OpenCodeProject,
@@ -945,11 +1028,23 @@ class OpencodeViewModel(
     private suspend fun resolveSessionForProject(service: OpenCodeService, project: OpenCodeProject): OpenCodeSession {
         val projectDirectory = normalizeDirectory(project.directory)
         project.sessionId?.let { sessionId ->
-            sessions.firstOrNull { it.id == sessionId }?.let { return it }
+            sessions.firstOrNull { it.id == sessionId }?.let { session ->
+                val sessionDirectory = session.directory?.let(::normalizeDirectory)
+                if (sessionDirectory == projectDirectory) {
+                    return session
+                }
+            }
         }
+        sessions
+            .asSequence()
+            .filter { session ->
+                val sessionDirectory = session.directory?.let(::normalizeDirectory)
+                sessionDirectory == projectDirectory
+            }
+            .maxByOrNull { it.time }
+            ?.let { return it }
         sessions.firstOrNull { session ->
-            val sessionDirectory = session.directory?.let(::normalizeDirectory)
-            session.projectID == project.id || sessionDirectory == projectDirectory
+            session.projectID == project.id
         }?.let { return it }
         val created = client.createSession(service.baseUrl, project)
         sessions = sessions + created
@@ -1150,6 +1245,7 @@ class OpencodeViewModel(
         val models: List<OpenCodeModelOption>,
         val modes: List<OpenCodeMode>,
         val messages: List<OpenCodeChatMessage>,
+        val healthVersion: String?,
         val selection: SelectionState,
     )
 }

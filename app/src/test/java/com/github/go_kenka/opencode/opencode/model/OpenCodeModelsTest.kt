@@ -50,7 +50,7 @@ class OpenCodeModelsTest {
         assertEquals(
             OpenCodeProject(
                 id = "project-1",
-                name = "Alpha",
+                name = "alpha",
                 directory = "/work/alpha",
                 sessionId = "session-new",
                 isLocalOnly = true,

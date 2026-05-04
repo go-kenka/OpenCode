@@ -32,11 +32,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.github.go_kenka.opencode.R
-import com.github.go_kenka.opencode.theme.JetchatTheme
+import com.github.go_kenka.opencode.theme.OpenCodeTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun JetchatAppBar(
+fun OpenCodeAppBar(
     modifier: Modifier = Modifier,
     scrollBehavior: TopAppBarScrollBehavior? = null,
     onNavIconPressed: () -> Unit = { },
@@ -49,7 +49,7 @@ fun JetchatAppBar(
         title = title,
         scrollBehavior = scrollBehavior,
         navigationIcon = {
-            JetchatIcon(
+            OpenCodeIcon(
                 contentDescription = stringResource(id = R.string.navigation_drawer_open),
                 modifier = Modifier
                     .size(64.dp)
@@ -63,17 +63,17 @@ fun JetchatAppBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
-fun JetchatAppBarPreview() {
-    JetchatTheme {
-        JetchatAppBar(title = { Text("Preview!") })
+fun OpenCodeAppBarPreview() {
+    OpenCodeTheme {
+        OpenCodeAppBar(title = { Text("Preview!") })
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
-fun JetchatAppBarPreviewDark() {
-    JetchatTheme(isDarkTheme = true) {
-        JetchatAppBar(title = { Text("Preview!") })
+fun OpenCodeAppBarPreviewDark() {
+    OpenCodeTheme(isDarkTheme = true) {
+        OpenCodeAppBar(title = { Text("Preview!") })
     }
 }

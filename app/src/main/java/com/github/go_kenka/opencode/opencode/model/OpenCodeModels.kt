@@ -22,9 +22,16 @@ data class OpenCodeService(
     val serviceName: String,
     val host: String,
     val port: Int,
+    val username: String? = null,
+    val password: String? = null,
 ) {
     val baseUrl: String = "http://$host:$port"
 }
+
+data class OpenCodeHealth(
+    val healthy: Boolean,
+    val version: String? = null,
+)
 
 data class OpenCodeSession(
     val id: String,
@@ -59,7 +66,7 @@ data class OpenCodeProject(
                     val directory = latest.directory ?: return@mapNotNull null
                     OpenCodeProject(
                         id = latest.projectID ?: localProjectId(directoryKey),
-                        name = latest.title?.takeIf { it.isNotBlank() } ?: directory.substringAfterLast('/'),
+                        name = directory.substringAfterLast('/').ifBlank { directory },
                         directory = directory,
                         sessionId = latest.id,
                         isLocalOnly = true,
@@ -97,6 +104,8 @@ data class OpenCodeChatMessage(
     val id: String = UUID.randomUUID().toString(),
     val role: String,
     val content: String,
+    val reasoningContent: String = "",
+    val reasoningCompleted: Boolean = true,
     val isError: Boolean = false,
     val time: Long = System.currentTimeMillis(),
 )
@@ -116,7 +125,7 @@ data class OpenCodeTodoItem(
 enum class OpenCodePermissionResponse(val wireValue: String) {
     ONCE("once"),
     ALWAYS("always"),
-    DENY("deny"),
+    DENY("reject"),
 }
 
 data class OpenCodeDirectoryEntry(
@@ -178,6 +187,7 @@ data class OpenCodeUiState(
     val pendingServiceSelection: Boolean = false,
     val pendingService: OpenCodeService? = null,
     val service: OpenCodeService? = null,
+    val healthVersion: String? = null,
     val recentSessions: List<OpenCodeSession> = emptyList(),
     val projects: List<OpenCodeProject> = emptyList(),
     val selectedProject: OpenCodeProject? = null,

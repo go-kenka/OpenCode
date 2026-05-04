@@ -4,13 +4,13 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import com.github.go_kenka.opencode.components.JetchatDrawerContent
+import com.github.go_kenka.opencode.components.OpenCodeDrawerContent
 import com.github.go_kenka.opencode.conversation.OpenCodeTestTags
 import com.github.go_kenka.opencode.conversation.OpenCodeConversationScreen
 import com.github.go_kenka.opencode.opencode.model.OpenCodeProject
 import com.github.go_kenka.opencode.opencode.model.OpenCodeSession
 import com.github.go_kenka.opencode.opencode.model.OpenCodeUiState
-import com.github.go_kenka.opencode.theme.JetchatTheme
+import com.github.go_kenka.opencode.theme.OpenCodeTheme
 import org.junit.Rule
 import org.junit.Test
 
@@ -27,7 +27,7 @@ class OpenCodeVisualStyleTest {
             directory = "/tmp/opencode",
         )
         composeTestRule.setContent {
-            JetchatTheme {
+            OpenCodeTheme {
                 OpenCodeConversationScreen(
                     uiState = OpenCodeUiState(
                         projects = listOf(project),
@@ -35,6 +35,7 @@ class OpenCodeVisualStyleTest {
                         isConnecting = false,
                     ),
                     onProjectSelected = {},
+                    onProjectDeleteConfirmed = {},
                     onAddProjectClick = {},
                     onAddProjectDismiss = {},
                     onAddProjectDirectoryOpen = {},
@@ -46,6 +47,9 @@ class OpenCodeVisualStyleTest {
                     onThinkingSelected = {},
                     onMessageSent = {},
                     onAbortSending = {},
+                    onPermissionAllowOnce = {},
+                    onPermissionAllowAlways = {},
+                    onPermissionDeny = {},
                 )
             }
         }
@@ -56,10 +60,10 @@ class OpenCodeVisualStyleTest {
     }
 
     @Test
-    fun drawerSearchAndSettingsTags_exist() {
+    fun drawerSearchTag_exists() {
         composeTestRule.setContent {
-            JetchatTheme {
-                JetchatDrawerContent(
+            OpenCodeTheme {
+                OpenCodeDrawerContent(
                     sessions = listOf(
                         OpenCodeSession(
                             id = "session-1",
@@ -71,12 +75,10 @@ class OpenCodeVisualStyleTest {
                     ),
                     selectedSessionId = "session-1",
                     onSessionClicked = {},
-                    onSettingsClicked = {},
                 )
             }
         }
 
         composeTestRule.onNodeWithTag(OpenCodeTestTags.DrawerSearch).assertIsDisplayed()
-        composeTestRule.onNodeWithTag(OpenCodeTestTags.DrawerSettings).assertIsDisplayed()
     }
 }

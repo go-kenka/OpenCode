@@ -25,19 +25,18 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import com.github.go_kenka.opencode.opencode.model.OpenCodeSession
-import com.github.go_kenka.opencode.theme.JetchatTheme
+import com.github.go_kenka.opencode.theme.OpenCodeTheme
 import com.github.go_kenka.opencode.theme.opencodeTokens
 
 @Composable
-fun JetchatDrawer(
+fun OpenCodeDrawer(
     drawerState: DrawerState = rememberDrawerState(initialValue = Closed),
     selectedSessionId: String?,
     sessions: List<OpenCodeSession>,
     onSessionClicked: (String) -> Unit,
-    onSettingsClicked: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    JetchatTheme {
+    OpenCodeTheme {
         val tokens = opencodeTokens()
         ModalNavigationDrawer(
             drawerState = drawerState,
@@ -51,11 +50,10 @@ fun JetchatDrawer(
                         bottomEnd = tokens.shapes.large,
                     ),
                 ) {
-                    JetchatDrawerContent(
+                    OpenCodeDrawerContent(
                         sessions = sessions,
                         selectedSessionId = selectedSessionId,
                         onSessionClicked = onSessionClicked,
-                        onSettingsClicked = onSettingsClicked,
                     )
                 }
             },

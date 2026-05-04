@@ -73,6 +73,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -87,6 +88,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import android.widget.Toast
 import com.github.go_kenka.opencode.R
 import com.github.go_kenka.opencode.opencode.model.OpenCodeMode
@@ -102,6 +104,7 @@ import java.util.Locale
 
 private data class OpenCodeColors(
     val bg: Color,
+    val chatPanelBg: Color,
     val line: Color,
     val panel: Color,
     val panelAlt: Color,
@@ -120,7 +123,6 @@ object OpenCodeTestTags {
     const val ComposerToolbar = "opencode_composer_toolbar"
     const val AttachmentButton = "opencode_attachment_button"
     const val DrawerSearch = "opencode_drawer_search"
-    const val DrawerSettings = "opencode_drawer_settings"
 }
 
 @Composable
@@ -129,6 +131,7 @@ private fun openCodeColors(): OpenCodeColors {
     val palette = tokens.palette
     return OpenCodeColors(
         bg = palette.background,
+        chatPanelBg = Color(0xFFF3F4F6),
         line = palette.borderTertiary,
         panel = palette.surface,
         panelAlt = palette.surfaceInteractive,
@@ -169,9 +172,10 @@ fun OpenCodeConversationScreen(
     onDiscoveredServiceSelected: (OpenCodeService) -> Unit = {},
     onDiscoveredServicePickerDismiss: () -> Unit = {},
     onRetryDiscovery: () -> Unit = {},
+    onManualServerSave: (OpenCodeService, String?) -> Unit = { _, _ -> },
+    onManualServerDelete: (OpenCodeService) -> Unit = {},
     onMenuClick: () -> Unit = {},
     onServerConfigClick: () -> Unit = {},
-    onCreateSessionClick: () -> Unit = {},
     onFileUploadClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -202,46 +206,57 @@ fun OpenCodeConversationScreen(
                 onAddProjectConfirm = onAddProjectConfirm,
                 onMenuClick = onMenuClick,
                 onServerConfigClick = onServerConfigClick,
-                onCreateSessionClick = onCreateSessionClick,
                 onRetryDiscovery = onRetryDiscovery,
                 serverOptions = serverOptions,
                 onServerSelected = onServerSelected,
+                onManualServerSave = onManualServerSave,
+                onManualServerDelete = onManualServerDelete,
             )
             HorizontalDivider(color = colors.line)
             TodoStatusBar(
                 todos = uiState.todos,
                 onClick = { showTodoDialog = true },
             )
-            if (uiState.isHistoryLoading && uiState.messages.isEmpty()) {
-                HistoryLoadingState(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                )
-            } else if (uiState.messages.isEmpty()) {
-                EmptyConversationState(
-                    projectName = uiState.selectedProject?.name ?: "构建任何东西",
-                    projectPath = uiState.selectedProject?.directory ?: "/",
-                    gitBranch = uiState.selectedProject?.gitBranch,
-                    gitStatusSummary = uiState.selectedProject?.gitStatusSummary,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    state = messageListState,
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    items(uiState.messages) { msg ->
-                        if (msg.role == "user") {
-                            UserCard(msg.content, msg.time)
-                        } else {
-                            AssistantCard(msg.content, msg.time, isError = msg.isError)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .background(colors.chatPanelBg),
+            ) {
+                if (uiState.isHistoryLoading && uiState.messages.isEmpty()) {
+                    HistoryLoadingState(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                    )
+                } else if (uiState.messages.isEmpty()) {
+                    EmptyConversationState(
+                        projectName = uiState.selectedProject?.name ?: "构建任何东西",
+                        projectPath = uiState.selectedProject?.directory ?: "/",
+                        gitBranch = uiState.selectedProject?.gitBranch,
+                        gitStatusSummary = uiState.selectedProject?.gitStatusSummary,
+                        modifier = Modifier
+                            .fillMaxSize(),
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        state = messageListState,
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(uiState.messages) { msg ->
+                            if (msg.role == "user") {
+                                UserCard(msg.content, msg.time)
+                            } else {
+                                AssistantCard(
+                                    content = msg.content,
+                                    time = msg.time,
+                                    isError = msg.isError,
+                                    reasoningContent = msg.reasoningContent,
+                                    reasoningCompleted = msg.reasoningCompleted,
+                                )
+                            }
                         }
                     }
                 }
@@ -299,29 +314,37 @@ private fun TodoStatusBar(
     val done = todos.count { it.done }
     val total = todos.size
     val latest = todos.lastOrNull()?.text ?: "暂无待办"
-    Row(
+    val capsuleShape = RoundedCornerShape(50)
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = spacing.lg, vertical = spacing.xs)
-            .clip(RoundedCornerShape(tokens.shapes.medium))
-            .background(colors.panelAlt)
-            .border(tokens.borders.default, colors.line, RoundedCornerShape(tokens.shapes.medium))
-            .clickable(onClick = onClick)
-            .padding(horizontal = spacing.md, vertical = spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
+            .background(colors.chatPanelBg)
+            .padding(horizontal = spacing.lg, vertical = spacing.xs),
+        contentAlignment = Alignment.Center,
     ) {
-        Text("TODO", color = colors.accent, fontSize = typography.small, fontWeight = FontWeight.Medium)
-        Spacer(Modifier.width(spacing.sm))
-        Text("($done/$total)", color = colors.textSecondary, fontSize = typography.small)
-        Spacer(Modifier.width(spacing.sm))
-        Text(
-            text = latest,
-            color = colors.textPrimary,
-            fontSize = typography.small,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
+        Row(
+            modifier = Modifier
+                .clip(capsuleShape)
+                .background(colors.chatPanelBg)
+                .border(tokens.borders.default, colors.line, capsuleShape)
+                .clickable(onClick = onClick)
+                .padding(horizontal = spacing.md, vertical = spacing.xs)
+                .widthIn(max = 320.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Text("TODO", color = colors.accent, fontSize = typography.small, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.width(spacing.sm))
+            Text("($done/$total)", color = colors.textSecondary, fontSize = typography.small)
+            Spacer(Modifier.width(spacing.sm))
+            Text(
+                text = latest,
+                color = colors.textPrimary,
+                fontSize = typography.small,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -533,7 +556,6 @@ private fun HistoryLoadingState(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        AssistantTypingBubble()
         Spacer(Modifier.height(tokens.spacing.sm))
         Text(
             text = "正在加载历史消息...",
@@ -557,22 +579,27 @@ private fun TopCommandBar(
     onAddProjectConfirm: () -> Unit,
     onMenuClick: () -> Unit,
     onServerConfigClick: () -> Unit,
-    onCreateSessionClick: () -> Unit,
     onRetryDiscovery: () -> Unit,
     serverOptions: List<OpenCodeService>,
     onServerSelected: (OpenCodeService) -> Unit,
+    onManualServerSave: (OpenCodeService, String?) -> Unit,
+    onManualServerDelete: (OpenCodeService) -> Unit,
 ) {
     val colors = openCodeColors()
     val tokens = opencodeTokens()
     val spacing = tokens.spacing
     val typography = tokens.typography
     val actionShape = RoundedCornerShape(tokens.shapes.medium)
+    val menuButtonShape = RoundedCornerShape(50)
+    val projectSearchShape = RoundedCornerShape(50)
+    val serverButtonShape = RoundedCornerShape(50)
     val actionBorderColor = tokens.palette.borderTertiary
     val actionBackgroundColor = tokens.palette.surface
     var showProjectSheet by remember { mutableStateOf(false) }
     var deleteConfirmProjectDirectory by remember { mutableStateOf<String?>(null) }
     var showServerSheet by remember { mutableStateOf(false) }
-    var showGitSheet by remember { mutableStateOf(false) }
+    var editingService by remember { mutableStateOf<OpenCodeService?>(null) }
+    var deleteServer by remember { mutableStateOf<OpenCodeService?>(null) }
     val selectedProject = uiState.selectedProject
     val projectName = selectedProject?.name ?: "选择项目"
     val isConnected = uiState.service != null && !uiState.isConnecting && uiState.errorMessage == null
@@ -592,8 +619,8 @@ private fun TopCommandBar(
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(actionShape)
-                .border(tokens.borders.default, actionBorderColor, actionShape)
+                .clip(menuButtonShape)
+                .border(tokens.borders.default, actionBorderColor, menuButtonShape)
                 .background(actionBackgroundColor)
                 .clickable(onClick = onMenuClick),
             contentAlignment = Alignment.Center,
@@ -607,8 +634,8 @@ private fun TopCommandBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(actionShape)
-                    .border(tokens.borders.default, actionBorderColor, actionShape)
+                    .clip(projectSearchShape)
+                    .border(tokens.borders.default, actionBorderColor, projectSearchShape)
                     .background(actionBackgroundColor)
                     .clickable { showProjectSheet = true }
                     .padding(horizontal = spacing.md, vertical = spacing.sm),
@@ -639,8 +666,8 @@ private fun TopCommandBar(
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(actionShape)
-                .border(tokens.borders.default, actionBorderColor, actionShape)
+                .clip(serverButtonShape)
+                .border(tokens.borders.default, actionBorderColor, serverButtonShape)
                 .background(actionBackgroundColor)
                 .clickable {
                     onServerConfigClick()
@@ -650,8 +677,8 @@ private fun TopCommandBar(
         ) {
             Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_server),
-                    contentDescription = null,
+                    painter = painterResource(id = R.drawable.ic_settings),
+                    contentDescription = "服务器设置",
                     tint = colors.textPrimary,
                     modifier = Modifier.size(16.dp),
                 )
@@ -665,36 +692,6 @@ private fun TopCommandBar(
             }
         }
 
-        Spacer(Modifier.width(spacing.sm))
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(actionShape)
-                .border(tokens.borders.default, actionBorderColor, actionShape)
-                .background(actionBackgroundColor)
-                .clickable { showGitSheet = true },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_git_branch),
-                contentDescription = "Git 状态",
-                tint = colors.textPrimary,
-                modifier = Modifier.size(16.dp),
-            )
-        }
-
-        Spacer(Modifier.width(spacing.sm))
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(actionShape)
-                .border(tokens.borders.default, actionBorderColor, actionShape)
-                .background(actionBackgroundColor)
-                .clickable(onClick = onCreateSessionClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("+", color = colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Medium)
-        }
     }
 
     if (showProjectSheet) {
@@ -800,52 +797,6 @@ private fun TopCommandBar(
                 TextButton(onClick = { deleteConfirmProjectDirectory = null }) { Text("取消") }
             },
         )
-    }
-
-    if (showGitSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showGitSheet = false },
-            containerColor = colors.panel,
-            contentColor = colors.textPrimary,
-        ) {
-            Text(
-                text = "Git 状态",
-                color = colors.textPrimary,
-                fontSize = typography.large,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.md),
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.lg, vertical = spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(spacing.sm),
-            ) {
-                Text(
-                    text = "项目: ${selectedProject?.name ?: "未选择"}",
-                    color = colors.textPrimary,
-                    fontSize = typography.base,
-                )
-                Text(
-                    text = "分支: ${selectedProject?.gitBranch?.ifBlank { "未知分支" } ?: "未知分支"}",
-                    color = colors.textPrimary,
-                    fontSize = typography.base,
-                )
-                Text(
-                    text = "状态: ${selectedProject?.gitStatusSummary?.ifBlank { "Git 状态未知" } ?: "Git 状态未知"}",
-                    color = colors.textPrimary,
-                    fontSize = typography.base,
-                )
-                Text(
-                    text = "目录: ${selectedProject?.directory ?: "-"}",
-                    color = colors.textSecondary,
-                    fontSize = typography.small,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(Modifier.height(18.dp))
-        }
     }
 
     if (uiState.isProjectPickerVisible) {
@@ -995,6 +946,14 @@ private fun TopCommandBar(
                 fontSize = typography.base,
                 modifier = Modifier.padding(horizontal = spacing.lg),
             )
+            uiState.healthVersion?.let { version ->
+                Text(
+                    text = "版本: $version",
+                    color = colors.textSecondary,
+                    fontSize = typography.small,
+                    modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.xs),
+                )
+            }
             val connectedColor = Color(0xFF1DB954)
             val disconnectedColor = Color(0xFFFF3B30)
             val statusColor = if (isConnected) connectedColor else disconnectedColor
@@ -1024,12 +983,17 @@ private fun TopCommandBar(
                     .border(tokens.borders.default, tokens.palette.borderTertiary, RoundedCornerShape(tokens.shapes.medium))
                     .clickable {
                         onRetryDiscovery()
-                        showServerSheet = false
                     }
                     .padding(horizontal = spacing.md, vertical = spacing.sm),
             ) {
                 Text("重新发现服务", color = colors.textPrimary, fontSize = typography.small)
             }
+            Text(
+                text = uiState.discoveryStatus,
+                color = colors.textSecondary,
+                fontSize = typography.small,
+                modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.xs),
+            )
 
             HorizontalDivider(color = colors.line, modifier = Modifier.padding(vertical = 10.dp))
             Text(
@@ -1039,6 +1003,19 @@ private fun TopCommandBar(
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.xs),
             )
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = spacing.lg, vertical = spacing.xs)
+                    .clip(RoundedCornerShape(tokens.shapes.medium))
+                    .background(colors.panelAlt)
+                    .border(tokens.borders.default, tokens.palette.borderTertiary, RoundedCornerShape(tokens.shapes.medium))
+                    .clickable {
+                        editingService = OpenCodeService(serviceName = "", host = "", port = 4096)
+                    }
+                    .padding(horizontal = spacing.md, vertical = spacing.sm),
+            ) {
+                Text("添加服务器", color = colors.accent, fontSize = typography.small)
+            }
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1075,7 +1052,28 @@ private fun TopCommandBar(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
+                            if (!service.username.isNullOrBlank()) {
+                                Text(
+                                    text = "用户: ${service.username}",
+                                    color = colors.textSecondary,
+                                    fontSize = typography.small,
+                                )
+                            }
                         }
+                        Text(
+                            text = "编辑",
+                            color = colors.accent,
+                            fontSize = typography.small,
+                            modifier = Modifier
+                                .padding(end = spacing.sm)
+                                .clickable { editingService = service },
+                        )
+                        Text(
+                            text = "删除",
+                            color = colors.danger,
+                            fontSize = typography.small,
+                            modifier = Modifier.clickable { deleteServer = service },
+                        )
                         if (isCurrent) {
                             Text("当前", color = colors.accent, fontSize = typography.small, fontWeight = FontWeight.Medium)
                         }
@@ -1086,6 +1084,163 @@ private fun TopCommandBar(
             Spacer(Modifier.height(18.dp))
         }
     }
+
+    deleteServer?.let { service ->
+        AlertDialog(
+            onDismissRequest = { deleteServer = null },
+            title = { Text("删除服务器") },
+            text = { Text("确认删除 ${service.baseUrl} ?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onManualServerDelete(service)
+                        deleteServer = null
+                    },
+                ) { Text("确认") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteServer = null }) { Text("取消") }
+            },
+        )
+    }
+
+    editingService?.let { service ->
+        ServerEditorDialog(
+            initial = service,
+            onDismiss = { editingService = null },
+            onSave = { updated, originalKey ->
+                onManualServerSave(updated, originalKey)
+                editingService = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun ServerEditorDialog(
+    initial: OpenCodeService,
+    onDismiss: () -> Unit,
+    onSave: (OpenCodeService, String?) -> Unit,
+) {
+    val colors = openCodeColors()
+    val tokens = opencodeTokens()
+    val typography = tokens.typography
+    val spacing = tokens.spacing
+    var serverUrl by remember(initial) { mutableStateOf(initial.baseUrl.takeIf { initial.host.isNotBlank() } ?: "") }
+    var serverName by remember(initial) { mutableStateOf(initial.serviceName.takeIf { initial.serviceName.isNotBlank() } ?: "") }
+    var username by remember(initial) { mutableStateOf(initial.username.orEmpty()) }
+    var password by remember(initial) { mutableStateOf(initial.password.orEmpty()) }
+    val originalKey = initial.takeIf { it.host.isNotBlank() }?.let { "${it.host}:${it.port}" }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = colors.panel,
+        titleContentColor = colors.textPrimary,
+        textContentColor = colors.textPrimary,
+        title = { Text(if (originalKey == null) "添加服务器" else "编辑服务器") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                ServerEditorTextField(
+                    value = serverUrl,
+                    onValueChange = { serverUrl = it },
+                    label = "服务器 URL",
+                    placeholder = "http://localhost:4096",
+                )
+                ServerEditorTextField(
+                    value = serverName,
+                    onValueChange = { serverName = it },
+                    label = "服务器名称（可选）",
+                    placeholder = "Localhost",
+                )
+                ServerEditorTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = "用户名（可选）",
+                    placeholder = "opencode",
+                )
+                ServerEditorTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = "密码（可选）",
+                    placeholder = "请输入密码",
+                    visualTransformation = PasswordVisualTransformation(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                parseServerInput(serverUrl)?.let { (host, port) ->
+                    val normalizedName = serverName.ifBlank { host }
+                    onSave(
+                        OpenCodeService(
+                            serviceName = normalizedName,
+                            host = host,
+                            port = port,
+                            username = username.ifBlank { null },
+                            password = password.ifBlank { null },
+                        ),
+                        originalKey,
+                    )
+                }
+            }) { Text("保存", color = colors.accent) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消", color = colors.textSecondary) } },
+    )
+}
+
+@Composable
+private fun ServerEditorTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    placeholder: String,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
+) {
+    val colors = openCodeColors()
+    val tokens = opencodeTokens()
+    val typography = tokens.typography
+    val spacing = tokens.spacing
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+        Text(
+            text = label,
+            color = colors.textSecondary,
+            fontSize = typography.small,
+        )
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            visualTransformation = visualTransformation,
+            textStyle = TextStyle(
+                color = colors.textPrimary,
+                fontSize = typography.base,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(tokens.shapes.medium))
+                .background(colors.panelAlt)
+                .border(tokens.borders.default, colors.line, RoundedCornerShape(tokens.shapes.medium))
+                .padding(horizontal = spacing.md, vertical = spacing.sm),
+            decorationBox = { inner ->
+                if (value.isBlank()) {
+                    Text(
+                        text = placeholder,
+                        color = colors.textSecondary,
+                        fontSize = typography.base,
+                    )
+                }
+                inner()
+            },
+        )
+    }
+}
+
+private fun parseServerInput(raw: String): Pair<String, Int>? {
+    val normalized = raw.trim().ifBlank { return null }
+    val withScheme = if (normalized.startsWith("http://") || normalized.startsWith("https://")) normalized else "http://$normalized"
+    val run = runCatching { java.net.URI(withScheme) }.getOrNull() ?: return null
+    val host = run.host?.takeIf { it.isNotBlank() } ?: return null
+    val port = if (run.port > 0) run.port else if (run.scheme == "https") 443 else 80
+    return host to port
 }
 
 @Composable
@@ -1162,11 +1317,19 @@ private fun ReferenceAssistantCard() {
         content = "I've initialized the project structure. Here is the primary entry point for the API router.\n\n```ts\nexport const router = new Router();\n```",
         time = System.currentTimeMillis(),
         isError = false,
+        reasoningContent = "",
+        reasoningCompleted = true,
     )
 }
 
 @Composable
-private fun AssistantCard(content: String, time: Long, isError: Boolean) {
+private fun AssistantCard(
+    content: String,
+    time: Long,
+    isError: Boolean,
+    reasoningContent: String,
+    reasoningCompleted: Boolean,
+) {
     val colors = openCodeColors()
     val typography = opencodeTokens().typography
     val isTyping = content.isBlank() && !isError
@@ -1197,6 +1360,13 @@ private fun AssistantCard(content: String, time: Long, isError: Boolean) {
                 fontSize = typography.small,
             )
             if (useEnhancedCard) {
+                ReasoningCard(
+                    reasoningContent = reasoningContent,
+                    reasoningCompleted = reasoningCompleted,
+                )
+                if (reasoningContent.isNotBlank()) {
+                    Spacer(Modifier.height(6.dp))
+                }
                 AssistantEnhancedCard(
                     content = content,
                     isError = isError,
@@ -1204,6 +1374,13 @@ private fun AssistantCard(content: String, time: Long, isError: Boolean) {
             } else if (isTyping) {
                 AssistantTypingBubble()
             } else {
+                ReasoningCard(
+                    reasoningContent = reasoningContent,
+                    reasoningCompleted = reasoningCompleted,
+                )
+                if (reasoningContent.isNotBlank()) {
+                    Spacer(Modifier.height(6.dp))
+                }
                 AssistantMarkdownBubble(
                     content = content,
                     isError = isError,
@@ -1214,45 +1391,24 @@ private fun AssistantCard(content: String, time: Long, isError: Boolean) {
 }
 
 @Composable
-private fun AssistantTypingBubble() {
+private fun AssistantTypingBubble(label: String = "深度思考中") {
     val colors = openCodeColors()
     val tokens = opencodeTokens()
-    val transition = rememberInfiniteTransition(label = "typing")
-    val phase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 950, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "typing_phase",
-    )
-
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(tokens.shapes.large))
             .background(colors.panel)
             .border(tokens.borders.default, colors.line, RoundedCornerShape(tokens.shapes.large))
             .padding(horizontal = tokens.spacing.md, vertical = tokens.spacing.sm),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        repeat(3) { index ->
-            val alpha = typingDotAlpha(phase, index)
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(colors.textSecondary.copy(alpha = alpha)),
-            )
-        }
+        Text(
+            text = label,
+            color = colors.textSecondary,
+            fontSize = tokens.typography.small,
+            fontWeight = FontWeight.Medium,
+        )
     }
-}
-
-private fun typingDotAlpha(phase: Float, index: Int): Float {
-    val shifted = (phase + index * 0.2f) % 1f
-    val pulse = if (shifted < 0.5f) shifted * 2f else (1f - shifted) * 2f
-    return 0.25f + pulse * 0.75f
 }
 
 @Composable
@@ -1413,7 +1569,7 @@ private fun AssistantMarkdownBubble(
     val colors = openCodeColors()
     val tokens = opencodeTokens()
     val copyRaw = rememberRawCopyAction()
-    Box(
+    Column(
         modifier = Modifier
             .copyRawOnLongPress(content, copyRaw)
             .clip(RoundedCornerShape(tokens.shapes.large))
@@ -1425,6 +1581,68 @@ private fun AssistantMarkdownBubble(
             content = content,
             textColor = if (isError) colors.danger else colors.textPrimary,
         )
+    }
+}
+
+@Composable
+private fun ReasoningCard(
+    reasoningContent: String,
+    reasoningCompleted: Boolean,
+) {
+    if (reasoningContent.isBlank()) return
+    val colors = openCodeColors()
+    val tokens = opencodeTokens()
+    var expanded by rememberSaveable(reasoningContent) { mutableStateOf(true) }
+    LaunchedEffect(reasoningCompleted) {
+        if (reasoningCompleted) expanded = false
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(tokens.shapes.medium))
+            .background(colors.panelAlt)
+            .border(tokens.borders.default, colors.line, RoundedCornerShape(tokens.shapes.medium)),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(horizontal = tokens.spacing.sm, vertical = tokens.spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_chevron_down),
+                contentDescription = null,
+                tint = colors.textSecondary,
+                modifier = Modifier
+                    .size(16.dp)
+                    .rotate(if (expanded) 0f else -90f),
+            )
+            Spacer(Modifier.width(tokens.spacing.xs))
+            Text(
+                text = "深度思考",
+                color = colors.textSecondary,
+                fontSize = tokens.typography.small,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.width(tokens.spacing.xs))
+            Text(
+                text = if (reasoningCompleted) "已完成" else "思考中",
+                color = colors.textSecondary,
+                fontSize = tokens.typography.small,
+            )
+        }
+        if (expanded) {
+            HorizontalDivider(color = colors.line)
+            AssistantMarkdownContent(
+                content = reasoningContent,
+                textColor = colors.textSecondary,
+                modifier = Modifier.padding(
+                    horizontal = tokens.spacing.sm,
+                    vertical = tokens.spacing.xs,
+                ),
+            )
+        }
     }
 }
 
@@ -1642,12 +1860,12 @@ private fun ComposerBar(
     val tokens = opencodeTokens()
     val spacing = tokens.spacing
     val typography = tokens.typography
-    val composerContainerShape = RoundedCornerShape(tokens.shapes.large)
-    val composerToolbarShape = RoundedCornerShape(tokens.shapes.medium)
+    val composerContainerShape = RoundedCornerShape(24.dp)
+    val composerInputShape = RoundedCornerShape(20.dp)
     val composerBorderColor = tokens.palette.borderTertiary
     var text by rememberSaveable { mutableStateOf("") }
     val canSend = text.isNotBlank() && uiState.selectedProject != null
-    val slashCommands = listOf("/init")
+    val slashCommands = listOf("/new", "/init")
     val matchedSlashCommands = slashCommands.filter { it.startsWith(text) || text == "/" }
     val showSlashMenu = text.startsWith("/") && matchedSlashCommands.isNotEmpty()
 
@@ -1661,90 +1879,6 @@ private fun ComposerBar(
             .background(tokens.palette.surface)
             .padding(horizontal = spacing.sm, vertical = spacing.sm),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 72.dp)
-                .clip(composerToolbarShape)
-                .border(tokens.borders.default, composerBorderColor, composerToolbarShape)
-                .background(tokens.palette.surface)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-        ) {
-            BasicTextField(
-                value = text,
-                onValueChange = { text = it },
-                maxLines = 2,
-                textStyle = TextStyle(color = colors.textPrimary, fontSize = typography.base, lineHeight = typography.baseLineHeight),
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .fillMaxWidth()
-                    .padding(end = 38.dp),
-                decorationBox = { inner ->
-                    Box(contentAlignment = Alignment.TopStart) {
-                        if (text.isBlank()) {
-                            Text("随便问点什么...", color = colors.textSecondary, fontSize = typography.base)
-                        }
-                        inner()
-                    }
-                },
-            )
-            DropdownMenu(
-                expanded = showSlashMenu,
-                onDismissRequest = {},
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .background(tokens.palette.surface),
-            ) {
-                matchedSlashCommands.forEach { command ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = command,
-                                    color = colors.textPrimary,
-                                    fontSize = typography.base,
-                                )
-                            },
-                            onClick = {
-                                text = ""
-                                onMessageSent(command)
-                            },
-                        )
-                    }
-            }
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .size(30.dp)
-                    .clip(composerToolbarShape)
-                    .background(
-                        when {
-                            uiState.isSending -> colors.danger
-                            canSend -> colors.accent
-                            else -> colors.accentDim
-                        },
-                    )
-                    .clickable(enabled = uiState.isSending || canSend) {
-                        if (uiState.isSending) {
-                            onAbortSending()
-                        } else {
-                            val msg = text
-                            text = ""
-                            onMessageSent(msg)
-                        }
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = if (uiState.isSending) "■" else "➤",
-                    color = colors.onAccent,
-                    fontSize = typography.large,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(spacing.sm))
-
         Row(
             modifier = Modifier
                 .fillMaxWidth(),
@@ -1781,6 +1915,93 @@ private fun ComposerBar(
                 selected = uiState.selectedThinkingLevel,
                 onSelected = onThinkingSelected,
             )
+        }
+
+        Spacer(Modifier.height(spacing.sm))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+                    .clip(composerInputShape)
+                    .background(tokens.palette.surface)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+            ) {
+                BasicTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    maxLines = 2,
+                    textStyle = TextStyle(color = colors.textPrimary, fontSize = typography.base, lineHeight = typography.baseLineHeight),
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .padding(end = 38.dp),
+                    decorationBox = { inner ->
+                        Box(contentAlignment = Alignment.TopStart) {
+                            if (text.isBlank()) {
+                                Text("随便问点什么...", color = colors.textSecondary, fontSize = typography.base)
+                            }
+                            inner()
+                        }
+                    },
+                )
+                DropdownMenu(
+                    expanded = showSlashMenu,
+                    onDismissRequest = {},
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .background(tokens.palette.surface),
+                ) {
+                    matchedSlashCommands.forEach { command ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = command,
+                                    color = colors.textPrimary,
+                                    fontSize = typography.base,
+                                )
+                            },
+                            onClick = {
+                                text = ""
+                                onMessageSent(command)
+                            },
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(30.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(
+                            when {
+                                uiState.isSending -> colors.danger
+                                canSend -> colors.accent
+                                else -> colors.accentDim
+                            },
+                        )
+                        .clickable(enabled = uiState.isSending || canSend) {
+                            if (uiState.isSending) {
+                                onAbortSending()
+                            } else {
+                                val msg = text
+                                text = ""
+                                onMessageSent(msg)
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = if (uiState.isSending) "■" else "➤",
+                        color = colors.onAccent,
+                        fontSize = typography.large,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
         }
     }
 }

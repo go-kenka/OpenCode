@@ -19,6 +19,7 @@ package com.github.go_kenka.opencode.opencode.api
 import android.util.Log
 import com.github.go_kenka.opencode.opencode.model.OpenCodeChatMessage
 import com.github.go_kenka.opencode.opencode.model.OpenCodeDirectoryEntry
+import com.github.go_kenka.opencode.opencode.model.OpenCodeHealth
 import com.github.go_kenka.opencode.opencode.model.OpenCodeMode
 import com.github.go_kenka.opencode.opencode.model.OpenCodeModelOption
 import com.github.go_kenka.opencode.opencode.model.OpenCodePermissionRequest
@@ -34,6 +35,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Credentials
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -52,24 +54,43 @@ class OpenCodeClient(
         .retryOnConnectionFailure(true)
         .build(),
 ) {
+    @Volatile
+    private var basicAuthHeader: String? = null
+
     private val eventClient: OkHttpClient = okHttpClient.newBuilder()
         .readTimeout(0, TimeUnit.MILLISECONDS)
         .callTimeout(0, TimeUnit.MILLISECONDS)
         .build()
 
-    suspend fun health(baseUrl: String): Boolean = withContext(Dispatchers.IO) {
+    fun setBasicAuth(username: String?, password: String?) {
+        basicAuthHeader = if (username.isNullOrBlank()) {
+            null
+        } else {
+            Credentials.basic(username, password.orEmpty())
+        }
+    }
+
+    suspend fun health(baseUrl: String): OpenCodeHealth = withContext(Dispatchers.IO) {
         val request = Request.Builder()
+            .applyAuth()
             .url(baseUrl.endpoint("global/health"))
             .get()
             .build()
 
         okHttpClient.newCall(request).execute().use { response ->
-            response.isSuccessful
+            response.requireSuccessful()
+            val body = response.body?.string().orEmpty()
+            val json = runCatching { JSONObject(body) }.getOrNull() ?: JSONObject()
+            OpenCodeHealth(
+                healthy = json.optBoolean("healthy", false),
+                version = json.optString("version").takeIf { it.isNotBlank() },
+            )
         }
     }
 
     suspend fun listPathRoots(baseUrl: String): List<String> = withContext(Dispatchers.IO) {
         val request = Request.Builder()
+            .applyAuth()
             .url(baseUrl.endpoint("path"))
             .get()
             .build()
@@ -92,6 +113,7 @@ class OpenCodeClient(
             .addQueryParameter("limit", limit.toString())
             .build()
         val request = Request.Builder()
+            .applyAuth()
             .url(url)
             .get()
             .build()
@@ -118,6 +140,7 @@ class OpenCodeClient(
 
     suspend fun listSessions(baseUrl: String): List<OpenCodeSession> = withContext(Dispatchers.IO) {
         val request = Request.Builder()
+            .applyAuth()
             .url(baseUrl.endpoint("session"))
             .get()
             .build()
@@ -130,6 +153,7 @@ class OpenCodeClient(
 
     suspend fun listCommands(baseUrl: String): List<String> = withContext(Dispatchers.IO) {
         val request = Request.Builder()
+            .applyAuth()
             .url(baseUrl.endpoint("command"))
             .get()
             .build()
@@ -139,14 +163,9 @@ class OpenCodeClient(
             runCatching {
                 val array = JSONArray(body)
                 (0 until array.length()).mapNotNull { index ->
-                    when (val item = array.opt(index)) {
-                        is String -> item.takeIf { it.isNotBlank() }
-                        is JSONObject -> item.optString("command")
-                            .ifBlank { item.optString("name") }
-                            .ifBlank { item.optString("id") }
-                            .takeIf { it.isNotBlank() }
-                        else -> null
-                    }
+                    array.optJSONObject(index)
+                        ?.optString("name")
+                        ?.takeIf { it.isNotBlank() }
                 }
             }.getOrElse { emptyList() }
         }
@@ -179,6 +198,15 @@ class OpenCodeClient(
         OpenCodeJson.parseMessages(json)
     }
 
+    suspend fun listSessionTodos(
+        baseUrl: String,
+        sessionId: String,
+        directory: String? = null,
+    ): List<OpenCodeTodoItem> = withContext(Dispatchers.IO) {
+        val json = getBody(baseUrl, "session/$sessionId/todo", directory)
+        parseTodoArray(runCatching { JSONArray(json) }.getOrElse { JSONArray() })
+    }
+
     suspend fun getVcsInfo(baseUrl: String, directory: String? = null): OpenCodeVcsInfo = withContext(Dispatchers.IO) {
         val json = getBody(baseUrl, "vcs", directory)
         OpenCodeJson.parseVcsInfo(json)
@@ -198,6 +226,7 @@ class OpenCodeClient(
         thinkingLevel: ThinkingLevel,
         directory: String? = null,
         onDelta: ((String) -> Unit)? = null,
+        onReasoningUpdated: ((String) -> Unit)? = null,
         onPermissionRequested: ((OpenCodePermissionRequest) -> Unit)? = null,
         onTodoUpdated: ((List<OpenCodeTodoItem>) -> Unit)? = null,
     ): OpenCodeChatMessage = withContext(Dispatchers.IO) {
@@ -218,6 +247,7 @@ class OpenCodeClient(
                     responseBody = response.body?.charStream() ?: error("Empty SSE body"),
                     sessionId = sessionId,
                     onDelta = onDelta,
+                    onReasoningUpdated = onReasoningUpdated,
                     onPermissionRequested = onPermissionRequested,
                     onTodoUpdated = onTodoUpdated,
                 )
@@ -277,21 +307,7 @@ class OpenCodeClient(
             agent = agent?.agent,
             model = model,
         )
-        runCatching {
-            postCommand(baseUrl, sessionId, requestBody, directory)
-        }.getOrElse { throwable ->
-            val apiError = throwable as? OpenCodeApiException
-            if (apiError?.statusCode != 400) throw throwable
-
-            val fallbackBody = OpenCodeJson.buildCommandRequestJsonWithObjectArguments(
-                command = command.ensureSlashPrefix(),
-                arguments = arguments,
-                messageId = messageId,
-                agent = agent?.agent,
-                model = model,
-            )
-            postCommand(baseUrl, sessionId, fallbackBody, directory)
-        }
+        postCommand(baseUrl, sessionId, requestBody, directory)
     }
 
     private fun postCommand(
@@ -311,10 +327,6 @@ class OpenCodeClient(
             response.requireSuccessful()
             return OpenCodeJson.parseMessageResponse(response.body?.string().orEmpty())
         }
-    }
-
-    private fun String.ensureSlashPrefix(): String {
-        return if (startsWith("/")) this else "/$this"
     }
 
     private fun postPromptAsync(
@@ -359,12 +371,17 @@ class OpenCodeClient(
         responseBody: java.io.Reader,
         sessionId: String,
         onDelta: ((String) -> Unit)?,
+        onReasoningUpdated: ((String) -> Unit)?,
         onPermissionRequested: ((OpenCodePermissionRequest) -> Unit)?,
         onTodoUpdated: ((List<OpenCodeTodoItem>) -> Unit)?,
     ): OpenCodeChatMessage {
         val dataBuffer = StringBuilder()
         val fullText = StringBuilder()
+        val fullReasoning = StringBuilder()
         val recentEvents = ArrayDeque<String>()
+        val assistantPartTexts = linkedMapOf<String, String>()
+        val reasoningPartTexts = linkedMapOf<String, String>()
+        val assistantPartKinds = linkedMapOf<String, String>()
         var assistantMessageId: String? = null
         var done = false
         var doneReason = "unknown"
@@ -396,15 +413,62 @@ class OpenCodeClient(
                             if (recentEvents.size > 20) recentEvents.removeFirst()
                             Log.i(TAG, "stream:event.summary sessionId=$sessionId $eventSummary")
                             if (result.newAssistantMessageId != null) {
+                                if (assistantMessageId != null && assistantMessageId != result.newAssistantMessageId) {
+                                    assistantPartTexts.clear()
+                                    reasoningPartTexts.clear()
+                                    assistantPartKinds.clear()
+                                    fullText.clear()
+                                    fullReasoning.clear()
+                                }
                                 assistantMessageId = result.newAssistantMessageId
                             }
-                            if (result.delta.isNotEmpty()) {
-                                fullText.append(result.delta)
-                                Log.i(
-                                    TAG,
-                                    "stream:delta sessionId=$sessionId len=${result.delta.length} preview=${result.delta.take(60)}",
-                                )
-                                onDelta?.invoke(result.delta)
+                            if (result.partSnapshot != null && assistantMessageId != null && assistantMessageId == result.partSnapshot.messageId) {
+                                assistantPartKinds[result.partSnapshot.partId] = result.partSnapshot.kind
+                                if (result.partSnapshot.kind == "text") {
+                                    assistantPartTexts[result.partSnapshot.partId] = result.partSnapshot.text
+                                    val snapshotText = assistantPartTexts.values.joinToString("")
+                                    val deltaFromSnapshot = deriveDeltaFromSnapshot(fullText.toString(), snapshotText)
+                                    if (deltaFromSnapshot.isNotEmpty()) {
+                                        fullText.append(deltaFromSnapshot)
+                                        onDelta?.invoke(deltaFromSnapshot)
+                                    } else if (snapshotText != fullText.toString()) {
+                                        fullText.clear()
+                                        fullText.append(snapshotText)
+                                    }
+                                } else if (result.partSnapshot.kind == "reasoning") {
+                                    reasoningPartTexts[result.partSnapshot.partId] = result.partSnapshot.text
+                                    val snapshotReasoning = reasoningPartTexts.values.joinToString("")
+                                    if (snapshotReasoning != fullReasoning.toString()) {
+                                        fullReasoning.clear()
+                                        fullReasoning.append(snapshotReasoning)
+                                        onReasoningUpdated?.invoke(fullReasoning.toString())
+                                    }
+                                }
+                            }
+                            if (result.delta.isNotEmpty() && assistantMessageId != null) {
+                                result.partDelta?.let { partDelta ->
+                                    if (partDelta.messageId != assistantMessageId) return@let
+                                    val kind = assistantPartKinds[partDelta.partId]
+                                    if (kind == "reasoning") {
+                                        val previous = reasoningPartTexts[partDelta.partId].orEmpty()
+                                        reasoningPartTexts[partDelta.partId] = previous + partDelta.delta
+                                        fullReasoning.clear()
+                                        fullReasoning.append(reasoningPartTexts.values.joinToString(""))
+                                        onReasoningUpdated?.invoke(fullReasoning.toString())
+                                    } else {
+                                        val previous = assistantPartTexts[partDelta.partId].orEmpty()
+                                        assistantPartTexts[partDelta.partId] = previous + partDelta.delta
+                                    }
+                                }
+                                val kind = result.partDelta?.let { assistantPartKinds[it.partId] }
+                                if (kind != "reasoning") {
+                                    fullText.append(result.delta)
+                                    Log.i(
+                                        TAG,
+                                        "stream:delta sessionId=$sessionId len=${result.delta.length} preview=${result.delta.take(60)}",
+                                    )
+                                    onDelta?.invoke(result.delta)
+                                }
                             }
                             val permissionRequest = result.permissionRequest
                             if (permissionRequest != null) {
@@ -439,6 +503,8 @@ class OpenCodeClient(
             id = assistantMessageId ?: UUID.randomUUID().toString(),
             role = "assistant",
             content = fullText.toString(),
+            reasoningContent = fullReasoning.toString(),
+            reasoningCompleted = true,
             time = System.currentTimeMillis(),
         )
     }
@@ -446,10 +512,25 @@ class OpenCodeClient(
     private data class EventHandleResult(
         val delta: String = "",
         val newAssistantMessageId: String? = null,
+        val partDelta: PartDelta? = null,
+        val partSnapshot: PartSnapshot? = null,
         val permissionRequest: OpenCodePermissionRequest? = null,
         val todos: List<OpenCodeTodoItem>? = null,
         val isCompleted: Boolean = false,
         val errorMessage: String? = null,
+    )
+
+    private data class PartDelta(
+        val messageId: String,
+        val partId: String,
+        val delta: String,
+    )
+
+    private data class PartSnapshot(
+        val messageId: String,
+        val partId: String,
+        val kind: String,
+        val text: String,
     )
 
     private fun handleEventData(
@@ -469,22 +550,14 @@ class OpenCodeClient(
         return when (type) {
             "message.updated" -> {
                 val info = properties.optJSONObject("info") ?: return EventHandleResult()
-                val eventSessionId = info.optString("sessionID")
+                val eventSessionId = properties.optString("sessionID")
+                    .ifBlank { info.optString("sessionID") }
                 val role = info.optString("role")
                 if (eventSessionId == sessionId && role == "assistant") {
                     val assistantId = info.optString("id").takeIf { it.isNotBlank() }
-                    val messageStatus = info.optJSONObject("status")?.optString("type")
-                        .orEmpty()
-                        .lowercase()
-                    val completed = messageStatus == "completed" ||
-                        messageStatus == "complete" ||
-                        messageStatus == "done" ||
-                        messageStatus == "success" ||
-                        messageStatus == "succeeded"
                     Log.i(TAG, "stream:assistant.message id=$assistantId")
                     EventHandleResult(
                         newAssistantMessageId = assistantId,
-                        isCompleted = completed,
                     )
                 } else {
                     EventHandleResult()
@@ -492,32 +565,58 @@ class OpenCodeClient(
             }
             "message.part.updated" -> {
                 val part = properties.optJSONObject("part") ?: return EventHandleResult()
-                if (part.optString("sessionID") != sessionId) return EventHandleResult()
-                if (part.optString("type") != "text") return EventHandleResult()
-                if (currentAssistantMessageId == null) return EventHandleResult()
+                val eventSessionId = properties.optString("sessionID")
+                    .ifBlank { part.optString("sessionID") }
+                if (eventSessionId != sessionId) return EventHandleResult()
+                val partType = part.optString("type")
+                if (partType != "text" && partType != "reasoning") return EventHandleResult()
                 val messageId = part.optString("messageID").takeIf { it.isNotBlank() }
-                if (messageId != currentAssistantMessageId) {
+                if (messageId == null) return EventHandleResult()
+                if (partType == "text" && (currentAssistantMessageId == null || messageId != currentAssistantMessageId)) {
                     return EventHandleResult()
                 }
-                val delta = properties.optString("delta").ifBlank {
-                    val partText = part.optString("text")
-                    deriveDeltaFromSnapshot(currentText, partText)
+                if (partType == "reasoning" && currentAssistantMessageId != null && messageId != currentAssistantMessageId) {
+                    return EventHandleResult()
                 }
-                EventHandleResult(delta = delta, newAssistantMessageId = messageId)
+                val partId = part.optString("id").takeIf { it.isNotBlank() } ?: return EventHandleResult()
+                val snapshotText = part.optString("text")
+                val fallbackDelta = if (partType == "text") {
+                    properties.optString("delta").ifBlank {
+                        deriveDeltaFromSnapshot(currentText, snapshotText)
+                    }
+                } else {
+                    ""
+                }
+                EventHandleResult(
+                    delta = fallbackDelta,
+                    newAssistantMessageId = if (partType == "reasoning" && currentAssistantMessageId == null) messageId else null,
+                    partSnapshot = PartSnapshot(
+                        messageId = messageId,
+                        partId = partId,
+                        kind = partType,
+                        text = snapshotText,
+                    ),
+                )
             }
             "message.part.delta" -> {
-                val part = properties.optJSONObject("part") ?: return EventHandleResult()
-                if (part.optString("sessionID") != sessionId) return EventHandleResult()
-                if (part.optString("type") != "text") return EventHandleResult()
-                if (currentAssistantMessageId == null) return EventHandleResult()
-                val messageId = part.optString("messageID").takeIf { it.isNotBlank() }
-                if (messageId != currentAssistantMessageId) return EventHandleResult()
-                val delta = properties.optString("delta").ifBlank {
-                    part.optString("delta").ifBlank {
-                        part.optString("text")
-                    }
-                }
-                EventHandleResult(delta = delta, newAssistantMessageId = messageId)
+                val eventSessionId = properties.optString("sessionID")
+                if (eventSessionId != sessionId) return EventHandleResult()
+                val field = properties.optString("field")
+                if (field.isNotBlank() && field != "text") return EventHandleResult()
+                val messageId = properties.optString("messageID").takeIf { it.isNotBlank() }
+                    ?: return EventHandleResult()
+                if (currentAssistantMessageId == null || messageId != currentAssistantMessageId) return EventHandleResult()
+                val partId = properties.optString("partID").takeIf { it.isNotBlank() }
+                    ?: return EventHandleResult()
+                val delta = properties.optString("delta")
+                EventHandleResult(
+                    delta = delta,
+                    partDelta = PartDelta(
+                        messageId = messageId,
+                        partId = partId,
+                        delta = delta,
+                    ),
+                )
             }
             "session.error" -> {
                 if (!sessionMatched && hasAnySessionHint) return EventHandleResult()
@@ -538,8 +637,7 @@ class OpenCodeClient(
             "session.status" -> {
                 if (!sessionMatched && hasAnySessionHint) return EventHandleResult()
                 val statusValue = properties.opt("status")
-                    ?: properties.optJSONObject("session")?.opt("status")
-                    ?: properties.optJSONObject("info")?.opt("status")
+                    ?: return EventHandleResult()
                 val statusType = when (statusValue) {
                     is JSONObject -> statusValue.optString("type")
                     is String -> statusValue
@@ -550,86 +648,20 @@ class OpenCodeClient(
                     else -> ""
                 }
                 Log.i(TAG, "stream:session.status sessionId=$sessionId type=$statusType message=$statusMessage")
-                if (
-                    statusType == "idle" ||
-                    statusType == "completed" ||
-                    statusType == "complete" ||
-                    statusType == "done" ||
-                    statusType == "stopped" ||
-                    statusType == "success" ||
-                    statusType == "succeeded" ||
-                    statusType == "canceled" ||
-                    statusType == "cancelled" ||
-                    statusType == "aborted"
-                ) {
-                    EventHandleResult(isCompleted = true)
-                } else if (
-                    statusType == "retry" ||
-                    statusType == "error" ||
-                    statusType == "failed"
-                ) {
-                    EventHandleResult(
-                        errorMessage = statusMessage.ifBlank { "会话执行失败：$statusType" },
-                    )
-                } else {
-                    EventHandleResult()
+                when (statusType) {
+                    "idle" -> EventHandleResult(isCompleted = true)
+                    "retry" -> EventHandleResult(errorMessage = statusMessage.ifBlank { "会话执行重试失败" })
+                    else -> EventHandleResult()
                 }
             }
-            "session.completed", "session.stopped" -> {
+            "session.completed" -> {
                 if (sessionMatched || !hasAnySessionHint) {
                     EventHandleResult(isCompleted = true)
                 } else {
                     EventHandleResult()
                 }
             }
-            "session.updated" -> {
-                if (!sessionMatched && hasAnySessionHint) return EventHandleResult()
-                val statusType = properties.optJSONObject("session")
-                    ?.optJSONObject("status")
-                    ?.optString("type")
-                    .orEmpty()
-                    .ifBlank {
-                        properties.optJSONObject("info")
-                            ?.optJSONObject("session")
-                            ?.optJSONObject("status")
-                            ?.optString("type")
-                            .orEmpty()
-                    }
-                    .orEmpty()
-                    .lowercase()
-                if (
-                    statusType == "idle" ||
-                    statusType == "completed" ||
-                    statusType == "complete" ||
-                    statusType == "done" ||
-                    statusType == "stopped" ||
-                    statusType == "success" ||
-                    statusType == "succeeded"
-                ) {
-                    EventHandleResult(isCompleted = true)
-                } else {
-                    EventHandleResult()
-                }
-            }
-            "message.completed" -> {
-                val info = properties.optJSONObject("info")
-                    ?: properties.optJSONObject("message")
-                    ?: properties
-                val eventSessionId = info.optString("sessionID")
-                    .ifBlank { info.optString("sessionId") }
-                    .ifBlank { info.optString("session_id") }
-                val role = info.optString("role")
-                if (eventSessionId == sessionId && role == "assistant") {
-                    val assistantId = info.optString("id").takeIf { it.isNotBlank() }
-                    EventHandleResult(
-                        newAssistantMessageId = assistantId,
-                        isCompleted = true,
-                    )
-                } else {
-                    EventHandleResult()
-                }
-            }
-            "permission.updated", "permission.asked" -> {
+            "permission.asked" -> {
                 val permission = properties.optJSONObject("permission") ?: properties
                 val eventSessionId = permission.optString("sessionID")
                 if (eventSessionId != sessionId) return EventHandleResult()
@@ -704,15 +736,8 @@ class OpenCodeClient(
 
     private fun parseTodos(properties: JSONObject, sessionId: String): List<OpenCodeTodoItem>? {
         val eventSessionId = properties.optString("sessionID")
-            .ifBlank { properties.optJSONObject("todo")?.optString("sessionID").orEmpty() }
-        if (eventSessionId.isNotBlank() && eventSessionId != sessionId) return null
-        val array = when {
-            properties.optJSONArray("todos") != null -> properties.optJSONArray("todos")
-            properties.optJSONObject("todo")?.optJSONArray("items") != null -> properties.optJSONObject("todo")?.optJSONArray("items")
-            properties.optJSONObject("todo")?.optJSONArray("todos") != null -> properties.optJSONObject("todo")?.optJSONArray("todos")
-            properties.optJSONArray("items") != null -> properties.optJSONArray("items")
-            else -> null
-        } ?: return emptyList()
+        if (eventSessionId != sessionId) return null
+        val array = properties.optJSONArray("todos") ?: return emptyList()
         return parseTodoArray(array)
     }
 
@@ -723,27 +748,10 @@ class OpenCodeClient(
                 is JSONObject -> {
                     val id = item.optString("id").ifBlank { index.toString() }
                     val text = item.optString("content")
-                        .ifBlank { item.optString("text") }
-                        .ifBlank { item.optString("title") }
                     if (text.isBlank()) continue
-                    val statusValue = item.opt("status")
-                    val statusText = when (statusValue) {
-                        is JSONObject -> statusValue.optString("type")
-                        is String -> statusValue
-                        else -> item.optString("state")
-                    }.lowercase()
-                    val done = item.optBoolean("done", false) ||
-                        item.optBoolean("completed", false) ||
-                        statusText == "done" ||
-                        statusText == "completed" ||
-                        statusText == "complete" ||
-                        statusText == "finished" ||
-                        statusText == "cancelled" ||
-                        statusText == "canceled"
+                    val statusText = item.optString("status").lowercase()
+                    val done = statusText == "completed"
                     result += OpenCodeTodoItem(id = id, text = text, done = done)
-                }
-                is String -> if (item.isNotBlank()) {
-                    result += OpenCodeTodoItem(id = index.toString(), text = item, done = false)
                 }
             }
         }
@@ -782,9 +790,15 @@ class OpenCodeClient(
     }
 
     private fun requestWithDirectory(builder: Request.Builder, directory: String?): Request.Builder {
-        if (directory.isNullOrBlank()) return builder
+        val authed = builder.applyAuth()
+        if (directory.isNullOrBlank()) return authed
         val encoded = URLEncoder.encode(directory, StandardCharsets.UTF_8.toString())
-        return builder.header("x-opencode-directory", encoded)
+        return authed.header("x-opencode-directory", encoded)
+    }
+
+    private fun Request.Builder.applyAuth(): Request.Builder {
+        val header = basicAuthHeader ?: return this
+        return header("Authorization", header)
     }
 
     private companion object {

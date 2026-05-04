@@ -17,12 +17,12 @@
 package com.github.go_kenka.opencode.widget.theme
 
 import androidx.glance.material3.ColorProviders
-import com.github.go_kenka.opencode.theme.JetchatDarkColorScheme
-import com.github.go_kenka.opencode.theme.JetchatLightColorScheme
+import com.github.go_kenka.opencode.theme.OpenCodeDarkColorScheme
+import com.github.go_kenka.opencode.theme.OpenCodeLightColorScheme
 
-object JetchatGlanceColorScheme {
+object OpenCodeGlanceColorScheme {
     val colors = ColorProviders(
-        light = JetchatLightColorScheme,
-        dark = JetchatDarkColorScheme,
+        light = OpenCodeLightColorScheme,
+        dark = OpenCodeDarkColorScheme,
     )
 }

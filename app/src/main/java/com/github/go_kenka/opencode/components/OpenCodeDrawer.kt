@@ -34,11 +34,10 @@ import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -58,18 +58,17 @@ import androidx.compose.ui.unit.dp
 import com.github.go_kenka.opencode.R
 import com.github.go_kenka.opencode.conversation.OpenCodeTestTags
 import com.github.go_kenka.opencode.opencode.model.OpenCodeSession
-import com.github.go_kenka.opencode.theme.JetchatTheme
+import com.github.go_kenka.opencode.theme.OpenCodeTheme
 import com.github.go_kenka.opencode.theme.opencodeTokens
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @Composable
-fun JetchatDrawerContent(
+fun OpenCodeDrawerContent(
     sessions: List<OpenCodeSession>,
     selectedSessionId: String?,
     onSessionClicked: (String) -> Unit,
-    onSettingsClicked: () -> Unit,
 ) {
     val tokens = opencodeTokens()
     val spacing = tokens.spacing
@@ -93,30 +92,14 @@ fun JetchatDrawerContent(
         DrawerHeader()
         HorizontalDivider(color = tokens.palette.borderTertiary)
 
-        DrawerItemHeader("Chats")
-        OutlinedTextField(
+        DrawerItemHeader("会话")
+        DrawerSearchField(
             value = query,
             onValueChange = { query = it },
-            singleLine = true,
-            placeholder = { Text("搜索会话") },
-            leadingIcon = {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_search),
-                    contentDescription = null,
-                    tint = tokens.palette.textSecondary,
-                )
-            },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = drawerContentHorizontalInset, vertical = spacing.sm)
+                .padding(horizontal = drawerContentHorizontalInset, vertical = spacing.xs)
                 .testTag(OpenCodeTestTags.DrawerSearch),
-            shape = RoundedCornerShape(tokens.shapes.large),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = tokens.palette.surface,
-                focusedContainerColor = tokens.palette.surface,
-                unfocusedBorderColor = tokens.palette.borderTertiary,
-                focusedBorderColor = tokens.palette.borderSecondary,
-            ),
         )
 
         Box(
@@ -146,15 +129,6 @@ fun JetchatDrawerContent(
                 }
             }
         }
-
-        HorizontalDivider(
-            color = tokens.palette.borderTertiary,
-            modifier = Modifier.padding(horizontal = drawerContentHorizontalInset),
-        )
-        SettingsItem(
-            onClick = onSettingsClicked,
-            modifier = Modifier.padding(horizontal = drawerContentHorizontalInset, vertical = spacing.sm),
-        )
     }
 }
 
@@ -163,17 +137,17 @@ private fun DrawerHeader() {
     val tokens = opencodeTokens()
     val spacing = tokens.spacing
     val typography = tokens.typography
-    Row(modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.md), verticalAlignment = CenterVertically) {
+    Row(modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.sm), verticalAlignment = CenterVertically) {
         Icon(
             painter = painterResource(id = R.drawable.ic_opencode_logo),
             contentDescription = null,
             tint = androidx.compose.ui.graphics.Color.Unspecified,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(24.dp),
         )
         Column(modifier = Modifier.padding(start = spacing.sm)) {
             Text(
                 text = "OpenCode",
-                style = MaterialTheme.typography.titleLarge,
+                fontSize = typography.large,
                 color = tokens.palette.textPrimary,
                 fontWeight = FontWeight.Medium,
             )
@@ -187,13 +161,63 @@ private fun DrawerHeader() {
 }
 
 @Composable
+private fun DrawerSearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tokens = opencodeTokens()
+    val spacing = tokens.spacing
+    val typography = tokens.typography
+    val shape = RoundedCornerShape(50)
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle = TextStyle(
+            color = tokens.palette.textPrimary,
+            fontSize = typography.base,
+            lineHeight = typography.baseLineHeight,
+        ),
+        modifier = modifier
+            .heightIn(min = 40.dp)
+            .clip(shape)
+            .background(tokens.palette.surface)
+            .border(tokens.borders.default, tokens.palette.borderTertiary, shape)
+            .padding(horizontal = spacing.md, vertical = spacing.sm),
+        decorationBox = { inner ->
+            Row(verticalAlignment = CenterVertically) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_search),
+                    contentDescription = null,
+                    tint = tokens.palette.textSecondary,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.size(spacing.sm))
+                Box(modifier = Modifier.weight(1f)) {
+                    if (value.isBlank()) {
+                        Text(
+                            text = "搜索会话",
+                            color = tokens.palette.textSecondary,
+                            fontSize = typography.base,
+                            maxLines = 1,
+                        )
+                    }
+                    inner()
+                }
+            }
+        },
+    )
+}
+
+@Composable
 private fun DrawerItemHeader(text: String) {
     val tokens = opencodeTokens()
     val spacing = tokens.spacing
     Box(
         modifier = Modifier
-            .height(40.dp)
-            .padding(horizontal = spacing.lg),
+            .height(28.dp)
+            .padding(horizontal = spacing.md),
         contentAlignment = androidx.compose.ui.Alignment.CenterStart,
     ) {
         Text(
@@ -224,16 +248,16 @@ private fun SessionItem(
             .fillMaxWidth()
             .background(if (selected) tokens.palette.surfaceInteractive else tokens.palette.surface)
             .clickable(onClick = onClick)
-            .padding(horizontal = spacing.md, vertical = spacing.md),
+            .padding(horizontal = spacing.md, vertical = spacing.sm),
         verticalAlignment = CenterVertically,
     ) {
         Icon(
             painter = painterResource(id = R.drawable.ic_jetchat),
             contentDescription = null,
             tint = if (selected) tokens.palette.accent else tokens.palette.textSecondary,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(16.dp),
         )
-        Column(modifier = Modifier.padding(start = spacing.sm)) {
+        Column(modifier = Modifier.padding(start = spacing.sm).weight(1f)) {
             Text(
                 text = title,
                 fontSize = typography.base,
@@ -260,53 +284,17 @@ private fun formatSessionTime(timestamp: Long): String {
 }
 
 @Composable
-private fun SettingsItem(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val tokens = opencodeTokens()
-    val spacing = tokens.spacing
-    val typography = tokens.typography
-    val shape = RoundedCornerShape(tokens.shapes.large)
-    Row(
-        modifier = modifier
-            .heightIn(min = 52.dp)
-            .fillMaxWidth()
-            .clip(shape)
-            .background(tokens.palette.surface)
-            .border(tokens.borders.default, tokens.palette.borderTertiary, shape)
-            .clickable(onClick = onClick)
-            .testTag(OpenCodeTestTags.DrawerSettings),
-        verticalAlignment = CenterVertically,
-    ) {
-        Icon(
-            painter = painterResource(id = R.drawable.ic_settings),
-            contentDescription = null,
-            tint = tokens.palette.textSecondary,
-            modifier = Modifier.padding(start = spacing.lg),
-        )
-        Text(
-            text = "设置",
-            fontSize = typography.base,
-            color = tokens.palette.textPrimary,
-            modifier = Modifier.padding(start = spacing.md),
-        )
-    }
-}
-
-@Composable
 @Preview
 fun DrawerPreview() {
-    JetchatTheme {
+    OpenCodeTheme {
         Surface {
-            JetchatDrawerContent(
+            OpenCodeDrawerContent(
                 sessions = listOf(
                     OpenCodeSession("s1", "p1", "/Users/demo/app", "修复登录问题", System.currentTimeMillis()),
                     OpenCodeSession("s2", "p2", "/Users/demo/web", "首页重构", System.currentTimeMillis() - 60000L),
                 ),
                 selectedSessionId = "s1",
                 onSessionClicked = {},
-                onSettingsClicked = {},
             )
         }
     }

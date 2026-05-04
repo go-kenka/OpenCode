@@ -30,35 +30,21 @@ import org.json.JSONObject
 object OpenCodeJson {
     fun parsePathDirectories(json: String): List<String> {
         if (json.isBlank()) return emptyList()
-        return runCatching {
-            val result = linkedSetOf<String>()
-            collectDirectories(JSONArray(json), result)
-            result.toList()
-        }.recoverCatching {
-            val root = JSONObject(json)
-            val result = linkedSetOf<String>()
-            root.firstNonBlank("directory", "home", "worktree", "path")?.let { result += it }
-            collectDirectories(root.optJSONArray("paths"), result)
-            collectDirectories(root.optJSONArray("items"), result)
-            collectDirectories(root.optJSONArray("data"), result)
-            if (result.isEmpty()) {
-                collectDirectory(root, result)
-            }
-            result.toList()
-        }.getOrElse { emptyList() }
+        val root = runCatching { JSONObject(json) }.getOrNull() ?: return emptyList()
+        return listOf("directory", "worktree", "home")
+            .mapNotNull { key -> root.optString(key).takeIf { it.isNotBlank() } }
+            .distinct()
     }
 
     fun parseDirectoryEntries(json: String, baseDirectory: String): List<OpenCodeDirectoryEntry> {
         if (json.isBlank()) return emptyList()
+        val array = runCatching { JSONArray(json) }.getOrNull() ?: return emptyList()
         val result = linkedMapOf<String, OpenCodeDirectoryEntry>()
-        runCatching {
-            collectDirectoryEntries(JSONArray(json), baseDirectory, result)
-        }.recoverCatching {
-            val root = JSONObject(json)
-            collectDirectoryEntries(root.optJSONArray("items"), baseDirectory, result)
-            collectDirectoryEntries(root.optJSONArray("data"), baseDirectory, result)
-            collectDirectoryEntries(root.optJSONArray("results"), baseDirectory, result)
-            collectDirectoryEntries(root.optJSONArray("entries"), baseDirectory, result)
+        for (index in 0 until array.length()) {
+            val item = array.optString(index).takeIf { it.isNotBlank() } ?: continue
+            val directory = normalizeDirectory(baseDirectory, item)
+            val name = directory.substringAfterLast('/').ifBlank { directory }
+            result[directory] = OpenCodeDirectoryEntry(name = name, directory = directory)
         }
         return result.values.toList()
     }
@@ -87,36 +73,10 @@ object OpenCodeJson {
             addMode(name, label)
         }
 
-        runCatching {
-            val array = JSONArray(json)
-            for (index in 0 until array.length()) {
-                when (val item = array.opt(index)) {
-                    is JSONObject -> parseAgentObject(item)
-                    is String -> addMode(item, item)
-                }
-            }
-        }.onFailure {
-            val root = runCatching { JSONObject(json) }.getOrNull() ?: return@onFailure
-            root.optJSONArray("agents")?.let { array ->
-                for (index in 0 until array.length()) {
-                    when (val item = array.opt(index)) {
-                        is JSONObject -> parseAgentObject(item)
-                        is String -> addMode(item, item)
-                    }
-                }
-            }
-            root.keys().forEach { key ->
-                if (key.equals("agents", ignoreCase = true)) return@forEach
-                val value = root.opt(key)
-                when (value) {
-                    is JSONObject -> {
-                        if (value.optBoolean("hidden", false)) return@forEach
-                        parseAgentObject(value)
-                    }
-                    is String -> addMode(key, value)
-                    else -> if (value != null) addMode(key, key)
-                }
-            }
+        val array = runCatching { JSONArray(json) }.getOrNull() ?: return OpenCodeMode.defaults
+        for (index in 0 until array.length()) {
+            val item = array.optJSONObject(index) ?: continue
+            parseAgentObject(item)
         }
 
         if (!result.containsKey("build")) {
@@ -137,17 +97,9 @@ object OpenCodeJson {
 
     fun parseModels(json: String): List<OpenCodeModelOption> {
         if (json.isBlank()) return emptyList()
-        val root = JSONObject(json)
-        root.optJSONArray("all")?.let { return parseProviderArrayModels(it) }
-        root.optJSONArray("providers")?.let { return parseProviderArrayModels(it) }
-
-        val models = mutableListOf<OpenCodeModelOption>()
-        root.keys().forEach { providerID ->
-            val provider = root.optJSONObject(providerID) ?: return@forEach
-            if (!provider.isEnabledProvider()) return@forEach
-            models += parseProviderModels(providerID, provider)
-        }
-        return models.distinctBy { "${it.providerID}:${it.modelID}" }
+        val root = runCatching { JSONObject(json) }.getOrNull() ?: return emptyList()
+        val providers = root.optJSONArray("providers") ?: return emptyList()
+        return parseProviderArrayModels(providers)
     }
 
     fun parseSessions(json: String): List<OpenCodeSession> {
@@ -280,46 +232,11 @@ object OpenCodeJson {
     ): String {
         val root = JSONObject()
             .put("command", command)
-            .put("arguments", JSONArray(arguments))
+            .put("arguments", arguments.joinToString(" "))
         if (!messageId.isNullOrBlank()) root.put("messageID", messageId)
         if (!agent.isNullOrBlank()) root.put("agent", agent)
         if (model?.providerID != null && model.modelID != null) {
-            root.put(
-                "model",
-                JSONObject()
-                    .put("providerID", model.providerID)
-                    .put("modelID", model.modelID),
-            )
-        }
-        return root.toString()
-    }
-
-    fun buildCommandRequestJsonWithObjectArguments(
-        command: String,
-        arguments: List<String> = emptyList(),
-        messageId: String? = null,
-        agent: String? = null,
-        model: OpenCodeModelOption? = null,
-    ): String {
-        val root = JSONObject()
-            .put("command", command)
-            .put(
-                "arguments",
-                JSONObject().apply {
-                    arguments.forEachIndexed { index, value ->
-                        put(index.toString(), value)
-                    }
-                },
-            )
-        if (!messageId.isNullOrBlank()) root.put("messageID", messageId)
-        if (!agent.isNullOrBlank()) root.put("agent", agent)
-        if (model?.providerID != null && model.modelID != null) {
-            root.put(
-                "model",
-                JSONObject()
-                    .put("providerID", model.providerID)
-                    .put("modelID", model.modelID),
-            )
+            root.put("model", "${model.providerID}/${model.modelID}")
         }
         return root.toString()
     }
@@ -361,12 +278,22 @@ object OpenCodeJson {
                 }
             }
         }.trim()
+        val reasoning = buildString {
+            for (index in 0 until parts.length()) {
+                val part = parts.optJSONObject(index) ?: continue
+                if (part.optString("type") == "reasoning") {
+                    append(part.optString("text"))
+                }
+            }
+        }.trim()
         if (content.isBlank()) return null
         val time = parseMessageTime(root, info)
         return OpenCodeChatMessage(
             id = info.optString("id", role),
             role = role,
             content = content,
+            reasoningContent = reasoning,
+            reasoningCompleted = true,
             time = time,
         )
     }
@@ -405,11 +332,6 @@ object OpenCodeJson {
             models += parseProviderModels(providerID, providerName, provider)
         }
         return models.distinctBy { "${it.providerID}:${it.modelID}" }
-    }
-
-    private fun parseProviderModels(providerID: String, provider: JSONObject): List<OpenCodeModelOption> {
-        val providerName = provider.optString("name").takeIf { it.isNotBlank() } ?: providerID
-        return parseProviderModels(providerID, providerName, provider)
     }
 
     private fun parseProviderModels(
@@ -522,50 +444,6 @@ object OpenCodeJson {
             if (value != null) return value
         }
         return null
-    }
-
-    private fun collectDirectories(array: JSONArray?, result: MutableSet<String>) {
-        if (array == null) return
-        for (index in 0 until array.length()) {
-            when (val item = array.opt(index)) {
-                is String -> if (item.isNotBlank()) result += item
-                is JSONObject -> collectDirectory(item, result)
-            }
-        }
-    }
-
-    private fun collectDirectory(item: JSONObject, result: MutableSet<String>) {
-        val type = item.optString("type")
-        if (type.isNotBlank() && !type.equals("directory", ignoreCase = true)) return
-        val path = item.firstNonBlank("directory", "path", "worktree", "value") ?: return
-        result += path
-    }
-
-    private fun collectDirectoryEntries(
-        array: JSONArray?,
-        baseDirectory: String,
-        result: MutableMap<String, OpenCodeDirectoryEntry>,
-    ) {
-        if (array == null) return
-        for (index in 0 until array.length()) {
-            when (val item = array.opt(index)) {
-                is JSONObject -> {
-                    val type = item.optString("type")
-                    if (type.isNotBlank() && !type.equals("directory", ignoreCase = true)) continue
-                    val rawDirectory = item.firstNonBlank("directory", "path", "worktree", "value") ?: continue
-                    val directory = normalizeDirectory(baseDirectory, rawDirectory)
-                    val name = item.firstNonBlank("name", "title")
-                        ?: directory.substringAfterLast('/').ifBlank { directory }
-                    result[directory] = OpenCodeDirectoryEntry(name = name, directory = directory)
-                }
-                is String -> {
-                    if (item.isBlank()) continue
-                    val directory = normalizeDirectory(baseDirectory, item)
-                    val name = directory.substringAfterLast('/').ifBlank { directory }
-                    result[directory] = OpenCodeDirectoryEntry(name = name, directory = directory)
-                }
-            }
-        }
     }
 
     private fun normalizeDirectory(baseDirectory: String, rawPath: String): String {

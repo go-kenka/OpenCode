@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.github.go_kenka.opencode.opencode.model.OpenCodeMode
 import com.github.go_kenka.opencode.opencode.model.OpenCodeChatMessage
+import com.github.go_kenka.opencode.opencode.model.OpenCodeService
 import com.github.go_kenka.opencode.opencode.model.OpenCodeProject
 import com.github.go_kenka.opencode.opencode.model.ThinkingLevel
 import org.json.JSONArray
@@ -17,6 +18,42 @@ class OpencodePreferences(context: Context) {
 
     fun saveSelectedServiceKey(serviceKey: String) {
         prefs.edit().putString(KEY_SELECTED_SERVICE, serviceKey).apply()
+    }
+
+    fun getManualServices(): List<OpenCodeService> {
+        val raw = prefs.getString(KEY_MANUAL_SERVICES, null) ?: return emptyList()
+        return runCatching {
+            val array = JSONArray(raw)
+            (0 until array.length()).mapNotNull { index ->
+                val item = array.optJSONObject(index) ?: return@mapNotNull null
+                val host = item.optString("host").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val port = item.optInt("port").takeIf { it > 0 } ?: return@mapNotNull null
+                OpenCodeService(
+                    serviceName = item.optString("serviceName").takeIf { it.isNotBlank() } ?: "$host:$port",
+                    host = host,
+                    port = port,
+                    username = item.optString("username").takeIf { it.isNotBlank() },
+                    password = item.optString("password").takeIf { it.isNotBlank() },
+                )
+            }
+        }.getOrElse { emptyList() }
+    }
+
+    fun saveManualServices(services: List<OpenCodeService>) {
+        val array = JSONArray()
+        services
+            .distinctBy { "${it.host}:${it.port}" }
+            .forEach { service ->
+                array.put(
+                    JSONObject()
+                        .put("serviceName", service.serviceName)
+                        .put("host", service.host)
+                        .put("port", service.port)
+                        .put("username", service.username)
+                        .put("password", service.password),
+                )
+            }
+        prefs.edit().putString(KEY_MANUAL_SERVICES, array.toString()).apply()
     }
 
     fun getSelectedProjectId(serviceKey: String): String? =
@@ -166,6 +203,7 @@ class OpencodePreferences(context: Context) {
     companion object {
         private const val PREF_NAME = "opencode_prefs"
         private const val KEY_SELECTED_SERVICE = "selected_service"
+        private const val KEY_MANUAL_SERVICES = "manual_services"
         private const val KEY_SELECTED_PROJECT_PREFIX = "selected_project:"
         private const val KEY_SELECTED_PROJECT_DIRECTORY_PREFIX = "selected_project_directory:"
         private const val KEY_SELECTED_SESSION_PREFIX = "selected_session:"

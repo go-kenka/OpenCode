@@ -35,7 +35,7 @@ import androidx.test.espresso.Espresso
 import com.github.go_kenka.opencode.conversation.ConversationContent
 import com.github.go_kenka.opencode.conversation.KeyboardShownKey
 import com.github.go_kenka.opencode.data.exampleUiState
-import com.github.go_kenka.opencode.theme.JetchatTheme
+import com.github.go_kenka.opencode.theme.OpenCodeTheme
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -55,7 +55,7 @@ class UserInputTest {
     fun setUp() {
         // Launch the conversation screen
         composeTestRule.setContent {
-            JetchatTheme {
+            OpenCodeTheme {
                 ConversationContent(
                     uiState = exampleUiState,
                     navigateToProfile = { },

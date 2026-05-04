@@ -28,7 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-val JetchatDarkColorScheme = darkColorScheme(
+val OpenCodeDarkColorScheme = darkColorScheme(
     primary = Blue80,
     onPrimary = Blue20,
     primaryContainer = Blue30,
@@ -57,7 +57,7 @@ val JetchatDarkColorScheme = darkColorScheme(
     outline = BlueGrey60,
 )
 
-val JetchatLightColorScheme = lightColorScheme(
+val OpenCodeLightColorScheme = lightColorScheme(
     primary = Blue40,
     onPrimary = Color.White,
     primaryContainer = Blue90,
@@ -88,7 +88,7 @@ val JetchatLightColorScheme = lightColorScheme(
 
 @SuppressLint("NewApi")
 @Composable
-fun JetchatTheme(isDarkTheme: Boolean = isSystemInDarkTheme(), isDynamicColor: Boolean = false, content: @Composable () -> Unit) {
+fun OpenCodeTheme(isDarkTheme: Boolean = isSystemInDarkTheme(), isDynamicColor: Boolean = false, content: @Composable () -> Unit) {
     val dynamicColor = isDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val myColorScheme = when {
         dynamicColor && isDarkTheme -> {
@@ -99,9 +99,9 @@ fun JetchatTheme(isDarkTheme: Boolean = isSystemInDarkTheme(), isDynamicColor: B
             dynamicLightColorScheme(LocalContext.current)
         }
 
-        isDarkTheme -> JetchatDarkColorScheme
+        isDarkTheme -> OpenCodeDarkColorScheme
 
-        else -> JetchatLightColorScheme
+        else -> OpenCodeLightColorScheme
     }
 
     val openCodeTokens = OpenCodeDesignTokens(
@@ -115,7 +115,7 @@ fun JetchatTheme(isDarkTheme: Boolean = isSystemInDarkTheme(), isDynamicColor: B
     ProvideOpenCodeTokens(tokens = openCodeTokens) {
         MaterialTheme(
             colorScheme = myColorScheme,
-            typography = JetchatTypography,
+            typography = OpenCodeTypography,
             content = content,
         )
     }

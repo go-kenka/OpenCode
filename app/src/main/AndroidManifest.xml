@@ -31,7 +31,7 @@
         android:label="@string/app_name"
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Jetchat.Splash">
+        android:theme="@style/Theme.OpenCode.Splash">
 
         <activity
             android:name=".NavActivity"

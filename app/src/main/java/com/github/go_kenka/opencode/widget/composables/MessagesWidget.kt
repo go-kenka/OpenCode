@@ -35,8 +35,8 @@ import androidx.glance.text.Text
 import com.github.go_kenka.opencode.NavActivity
 import com.github.go_kenka.opencode.R
 import com.github.go_kenka.opencode.conversation.Message
-import com.github.go_kenka.opencode.widget.theme.JetChatGlanceTextStyles
-import com.github.go_kenka.opencode.widget.theme.JetchatGlanceColorScheme
+import com.github.go_kenka.opencode.widget.theme.OpenCodeGlanceTextStyles
+import com.github.go_kenka.opencode.widget.theme.OpenCodeGlanceColorScheme
 
 @Composable
 fun MessagesWidget(messages: List<Message>) {
@@ -46,7 +46,7 @@ fun MessagesWidget(messages: List<Message>) {
             iconColor = null,
             title = LocalContext.current.getString(R.string.messages_widget_title),
         )
-    }, backgroundColor = JetchatGlanceColorScheme.colors.background) {
+    }, backgroundColor = OpenCodeGlanceColorScheme.colors.background) {
         LazyColumn(modifier = GlanceModifier.fillMaxWidth()) {
             messages.forEach {
                 item {
@@ -65,11 +65,11 @@ fun MessageItem(message: Message) {
     Column(modifier = GlanceModifier.clickable(actionStartActivity<NavActivity>()).fillMaxWidth()) {
         Text(
             text = message.author,
-            style = JetChatGlanceTextStyles.titleMedium,
+            style = OpenCodeGlanceTextStyles.titleMedium,
         )
         Text(
             text = message.content,
-            style = JetChatGlanceTextStyles.bodyMedium,
+            style = OpenCodeGlanceTextStyles.bodyMedium,
         )
     }
 }

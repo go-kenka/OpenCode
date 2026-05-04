@@ -34,19 +34,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.go_kenka.opencode.MainViewModel
 import com.github.go_kenka.opencode.opencode.OpencodeViewModel
 import com.github.go_kenka.opencode.opencode.model.OpenCodePermissionResponse
-import com.github.go_kenka.opencode.theme.JetchatTheme
+import com.github.go_kenka.opencode.theme.OpenCodeTheme
 
 class ConversationFragment : Fragment() {
     private val activityViewModel: MainViewModel by activityViewModels()
     private val viewModel: OpencodeViewModel by activityViewModels()
+    private var discoveryPermissionRequestedForRetry: Boolean = false
     private val nearbyWifiPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         if (granted) {
-            viewModel.startDiscovery()
+            if (discoveryPermissionRequestedForRetry) {
+                viewModel.retryDiscovery()
+            } else {
+                viewModel.startDiscovery()
+            }
         } else {
             viewModel.markDiscoveryPermissionDenied()
         }
+        discoveryPermissionRequestedForRetry = false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,7 +65,7 @@ class ConversationFragment : Fragment() {
             layoutParams = LayoutParams(MATCH_PARENT, MATCH_PARENT)
 
             setContent {
-                JetchatTheme(isDynamicColor = false) {
+                OpenCodeTheme(isDynamicColor = false) {
                     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
                     OpenCodeConversationScreen(
                         uiState = uiState,
@@ -87,17 +93,19 @@ class ConversationFragment : Fragment() {
                         onDiscoveredServicePickerDismiss = viewModel::dismissDiscoveredServicePicker,
                         onMenuClick = { activityViewModel.openDrawer() },
                         onServerConfigClick = ::ensureDiscoveryPermission,
-                        onCreateSessionClick = viewModel::createNewSession,
+                        onManualServerSave = viewModel::saveManualService,
+                        onManualServerDelete = viewModel::deleteManualService,
                         onFileUploadClick = {
                             // TODO: Wire file picker and upload flow.
                         },
-                        onRetryDiscovery = ::ensureDiscoveryPermission,
+                        onRetryDiscovery = ::retryDiscoveryWithPermission,
                     )
                 }
             }
         }
 
     private fun ensureDiscoveryPermission() {
+        discoveryPermissionRequestedForRetry = false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             viewModel.startDiscovery()
             return
@@ -107,6 +115,20 @@ class ConversationFragment : Fragment() {
         if (ContextCompat.checkSelfPermission(requireContext(), permission) == PackageManager.PERMISSION_GRANTED) {
             viewModel.startDiscovery()
         } else {
+            nearbyWifiPermissionLauncher.launch(permission)
+        }
+    }
+
+    private fun retryDiscoveryWithPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            viewModel.retryDiscovery()
+            return
+        }
+        val permission = Manifest.permission.NEARBY_WIFI_DEVICES
+        if (ContextCompat.checkSelfPermission(requireContext(), permission) == PackageManager.PERMISSION_GRANTED) {
+            viewModel.retryDiscovery()
+        } else {
+            discoveryPermissionRequestedForRetry = true
             nearbyWifiPermissionLauncher.launch(permission)
         }
     }

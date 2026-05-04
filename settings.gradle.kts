@@ -34,6 +34,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "Jetchat"
+rootProject.name = "OpenCode"
 include(":app")
 

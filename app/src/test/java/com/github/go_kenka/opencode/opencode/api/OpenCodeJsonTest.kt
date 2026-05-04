@@ -235,4 +235,27 @@ class OpenCodeJsonTest {
         assertEquals("Zen Smart Free (Free)", freeModel.displayLabel)
         assertFalse(paidModel.isFree)
     }
+
+    @Test
+    fun buildsCommandRequestWithOpenApiShape() {
+        val json = JSONObject(
+            OpenCodeJson.buildCommandRequestJson(
+                command = "review",
+                arguments = listOf("--file", "README.md"),
+                messageId = "msg-1",
+                agent = "build",
+                model = OpenCodeModelOption(
+                    providerID = "openai",
+                    modelID = "gpt-5",
+                    label = "GPT-5",
+                ),
+            ),
+        )
+
+        assertEquals("review", json.getString("command"))
+        assertEquals("--file README.md", json.getString("arguments"))
+        assertEquals("msg-1", json.getString("messageID"))
+        assertEquals("build", json.getString("agent"))
+        assertEquals("openai/gpt-5", json.getString("model"))
+    }
 }

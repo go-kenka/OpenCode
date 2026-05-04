@@ -24,7 +24,7 @@ import androidx.glance.appwidget.provideContent
 import com.github.go_kenka.opencode.data.unreadMessages
 import com.github.go_kenka.opencode.widget.composables.MessagesWidget
 
-class JetChatWidget : GlanceAppWidget() {
+class OpenCodeWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {

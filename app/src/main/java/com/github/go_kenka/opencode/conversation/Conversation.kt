@@ -88,9 +88,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.github.go_kenka.opencode.FunctionalityNotAvailablePopup
 import com.github.go_kenka.opencode.R
-import com.github.go_kenka.opencode.components.JetchatAppBar
+import com.github.go_kenka.opencode.components.OpenCodeAppBar
 import com.github.go_kenka.opencode.data.exampleUiState
-import com.github.go_kenka.opencode.theme.JetchatTheme
+import com.github.go_kenka.opencode.theme.OpenCodeTheme
 import kotlinx.coroutines.launch
 
 /**
@@ -230,7 +230,7 @@ fun ChannelNameBar(
     if (functionalityNotAvailablePopupShown) {
         FunctionalityNotAvailablePopup { functionalityNotAvailablePopupShown = false }
     }
-    JetchatAppBar(
+    OpenCodeAppBar(
         modifier = modifier,
         scrollBehavior = scrollBehavior,
         onNavIconPressed = onNavIconPressed,
@@ -538,7 +538,7 @@ fun ClickableMessage(message: Message, isUserMe: Boolean, authorClicked: (String
 @Preview
 @Composable
 fun ConversationPreview() {
-    JetchatTheme {
+    OpenCodeTheme {
         ConversationContent(
             uiState = exampleUiState,
             navigateToProfile = { },
@@ -549,7 +549,7 @@ fun ConversationPreview() {
 @Preview
 @Composable
 fun ChannelBarPrev() {
-    JetchatTheme {
+    OpenCodeTheme {
         ChannelNameBar(channelName = "composers", channelMembers = 52)
     }
 }

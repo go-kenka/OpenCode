@@ -42,9 +42,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
-import com.github.go_kenka.opencode.components.JetchatDrawer
+import com.github.go_kenka.opencode.components.OpenCodeDrawer
 import com.github.go_kenka.opencode.opencode.OpencodeViewModel
-import com.github.go_kenka.opencode.theme.JetchatTheme
+import com.github.go_kenka.opencode.theme.OpenCodeTheme
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -85,7 +85,7 @@ class NavActivity : AppCompatActivity() {
             ComposeView(this).apply {
                 consumeWindowInsets = false
                 setContent {
-                    JetchatTheme(isDynamicColor = false) {
+                    OpenCodeTheme(isDynamicColor = false) {
                         val drawerState = rememberDrawerState(initialValue = Closed)
                         val drawerOpen by viewModel.drawerShouldBeOpened
                             .collectAsStateWithLifecycle()
@@ -106,7 +106,7 @@ class NavActivity : AppCompatActivity() {
 
                         val scope = rememberCoroutineScope()
 
-                        JetchatDrawer(
+                        OpenCodeDrawer(
                             drawerState = drawerState,
                             selectedSessionId = opencodeState.selectedProject?.sessionId ?: selectedMenu,
                             sessions = opencodeState.recentSessions,
@@ -117,13 +117,6 @@ class NavActivity : AppCompatActivity() {
                                     drawerState.close()
                                 }
                                 selectedMenu = it
-                            },
-                            onSettingsClicked = {
-                                findNavController().navigate(R.id.nav_settings)
-                                scope.launch {
-                                    drawerState.close()
-                                }
-                                selectedMenu = "settings"
                             },
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {

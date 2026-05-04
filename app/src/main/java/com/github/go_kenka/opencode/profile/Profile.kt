@@ -67,7 +67,7 @@ import com.github.go_kenka.opencode.components.AnimatingFabContent
 import com.github.go_kenka.opencode.components.baselineHeight
 import com.github.go_kenka.opencode.data.colleagueProfile
 import com.github.go_kenka.opencode.data.meProfile
-import com.github.go_kenka.opencode.theme.JetchatTheme
+import com.github.go_kenka.opencode.theme.OpenCodeTheme
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -264,7 +264,7 @@ fun ProfileFab(extended: Boolean, userIsMe: Boolean, modifier: Modifier = Modifi
 @Preview(widthDp = 640, heightDp = 360)
 @Composable
 fun ConvPreviewLandscapeMeDefault() {
-    JetchatTheme {
+    OpenCodeTheme {
         ProfileScreen(meProfile)
     }
 }
@@ -272,7 +272,7 @@ fun ConvPreviewLandscapeMeDefault() {
 @Preview(widthDp = 360, heightDp = 480)
 @Composable
 fun ConvPreviewPortraitMeDefault() {
-    JetchatTheme {
+    OpenCodeTheme {
         ProfileScreen(meProfile)
     }
 }
@@ -280,7 +280,7 @@ fun ConvPreviewPortraitMeDefault() {
 @Preview(widthDp = 360, heightDp = 480)
 @Composable
 fun ConvPreviewPortraitOtherDefault() {
-    JetchatTheme {
+    OpenCodeTheme {
         ProfileScreen(colleagueProfile)
     }
 }
@@ -288,7 +288,7 @@ fun ConvPreviewPortraitOtherDefault() {
 @Preview
 @Composable
 fun ProfileFabPreview() {
-    JetchatTheme {
+    OpenCodeTheme {
         ProfileFab(extended = true, userIsMe = false)
     }
 }

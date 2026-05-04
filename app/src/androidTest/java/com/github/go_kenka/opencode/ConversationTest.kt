@@ -31,7 +31,7 @@ import com.github.go_kenka.opencode.conversation.ConversationContent
 import com.github.go_kenka.opencode.conversation.ConversationTestTag
 import com.github.go_kenka.opencode.conversation.ConversationUiState
 import com.github.go_kenka.opencode.data.exampleUiState
-import com.github.go_kenka.opencode.theme.JetchatTheme
+import com.github.go_kenka.opencode.theme.OpenCodeTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
 import org.junit.Rule
@@ -51,7 +51,7 @@ class ConversationTest {
     fun setUp() {
         // Launch the conversation screen
         composeTestRule.setContent {
-            JetchatTheme(isDarkTheme = themeIsDark.collectAsStateWithLifecycle(false).value) {
+            OpenCodeTheme(isDarkTheme = themeIsDark.collectAsStateWithLifecycle(false).value) {
                 ConversationContent(
                     uiState = conversationTestUiState,
                     navigateToProfile = { },

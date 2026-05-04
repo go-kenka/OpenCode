@@ -34,9 +34,4 @@
             app:argType="string" />
     </fragment>
 
-    <fragment
-        android:id="@+id/nav_settings"
-        android:name="com.github.go_kenka.opencode.settings.SettingsFragment"
-        android:label="Settings" />
-
 </navigation>

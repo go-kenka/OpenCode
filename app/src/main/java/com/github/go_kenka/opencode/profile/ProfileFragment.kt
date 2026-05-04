@@ -46,8 +46,8 @@ import androidx.fragment.app.viewModels
 import com.github.go_kenka.opencode.FunctionalityNotAvailablePopup
 import com.github.go_kenka.opencode.MainViewModel
 import com.github.go_kenka.opencode.R
-import com.github.go_kenka.opencode.components.JetchatAppBar
-import com.github.go_kenka.opencode.theme.JetchatTheme
+import com.github.go_kenka.opencode.components.OpenCodeAppBar
+import com.github.go_kenka.opencode.theme.OpenCodeTheme
 
 class ProfileFragment : Fragment() {
 
@@ -72,8 +72,8 @@ class ProfileFragment : Fragment() {
                     FunctionalityNotAvailablePopup { functionalityNotAvailablePopupShown = false }
                 }
 
-                JetchatTheme {
-                    JetchatAppBar(
+                OpenCodeTheme {
+                    OpenCodeAppBar(
                         // Reset the minimum bounds that are passed to the root of a compose tree
                         modifier = Modifier.wrapContentSize(),
                         onNavIconPressed = { activityViewModel.openDrawer() },
@@ -102,7 +102,7 @@ class ProfileFragment : Fragment() {
                 val userData by viewModel.userData.observeAsState()
                 val nestedScrollInteropConnection = rememberNestedScrollInteropConnection()
 
-                JetchatTheme {
+                OpenCodeTheme {
                     if (userData == null) {
                         ProfileError()
                     } else {
