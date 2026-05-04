@@ -94,12 +94,12 @@ import com.github.go_kenka.opencode.theme.OpenCodeTheme
 import kotlinx.coroutines.launch
 
 /**
- * Entry point for a conversation screen.
+ * OpenCode 会话示例页面入口。
  *
- * @param uiState [ConversationUiState] that contains messages to display
- * @param navigateToProfile User action when navigation to a profile is requested
- * @param modifier [Modifier] to apply to this layout node
- * @param onNavIconPressed Sends an event up when the user clicks on the menu
+ * @param uiState [ConversationUiState]，提供当前要展示的消息和会话信息
+ * @param navigateToProfile 用户点击作者信息后的回调
+ * @param modifier 应用于根布局的 [Modifier]
+ * @param onNavIconPressed 用户点击导航菜单后的回调
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -173,7 +173,7 @@ fun ConversationContent(
                 scrollBehavior = scrollBehavior,
             )
         },
-        // Exclude ime and navigation bar padding so this can be added by the UserInput composable
+        // 输入区会单独处理 IME 和导航栏内边距，这里先排除对应 inset。
         contentWindowInsets = ScaffoldDefaults
             .contentWindowInsets
             .exclude(WindowInsets.navigationBars)
@@ -209,8 +209,7 @@ fun ConversationContent(
                         scrollState.scrollToItem(0)
                     }
                 },
-                // let this element handle the padding so that the elevation is shown behind the
-                // navigation bar
+                // 让输入区处理导航栏内边距，保证底部阴影层级正常显示。
                 modifier = Modifier.navigationBarsPadding().imePadding(),
             )
         }
@@ -236,12 +235,12 @@ fun ChannelNameBar(
         onNavIconPressed = onNavIconPressed,
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Channel name
+                // 会话标题
                 Text(
                     text = channelName,
                     style = MaterialTheme.typography.titleMedium,
                 )
-                // Number of members
+                // 会话参与人数
                 Text(
                     text = stringResource(R.string.members, channelMembers),
                     style = MaterialTheme.typography.bodySmall,
@@ -250,7 +249,7 @@ fun ChannelNameBar(
             }
         },
         actions = {
-            // Search icon
+            // 搜索入口图标
             Icon(
                 painterResource(id = R.drawable.ic_search),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -260,7 +259,7 @@ fun ChannelNameBar(
                     .height(24.dp),
                 contentDescription = stringResource(id = R.string.search),
             )
-            // Info icon
+            // 详情入口图标
             Icon(
                 painterResource(id = R.drawable.ic_info),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -296,7 +295,7 @@ fun Messages(messages: List<Message>, navigateToProfile: (String) -> Unit, scrol
                 val isFirstMessageByAuthor = prevAuthor != content.author
                 val isLastMessageByAuthor = nextAuthor != content.author
 
-                // Hardcode day dividers for simplicity
+                // 示例数据固定插入日期分割线，便于演示布局。
                 if (index == messages.size - 1) {
                     item {
                         DayHeader("20 Aug")
@@ -318,14 +317,13 @@ fun Messages(messages: List<Message>, navigateToProfile: (String) -> Unit, scrol
                 }
             }
         }
-        // Jump to bottom button shows up when user scrolls past a threshold.
-        // Convert to pixels:
+        // 当消息列表滚动超过阈值时，显示“回到底部”按钮。
+        // 阈值先转换为像素：
         val jumpThreshold = with(LocalDensity.current) {
             JumpToBottomThreshold.toPx()
         }
 
-        // Show the button if the first visible item is not the first one or if the offset is
-        // greater than the threshold.
+        // 首项不可见或偏移量超过阈值时，显示按钮。
         val jumpToBottomButtonEnabled by remember {
             derivedStateOf {
                 scrollState.firstVisibleItemIndex != 0 ||
@@ -334,7 +332,7 @@ fun Messages(messages: List<Message>, navigateToProfile: (String) -> Unit, scrol
         }
 
         JumpToBottom(
-            // Only show if the scroller is not at the bottom
+            // 仅在未处于底部时显示按钮
             enabled = jumpToBottomButtonEnabled,
             onClicked = {
                 scope.launch {
@@ -363,7 +361,7 @@ fun Message(
     val spaceBetweenAuthors = if (isLastMessageByAuthor) Modifier.padding(top = 8.dp) else Modifier
     Row(modifier = spaceBetweenAuthors) {
         if (isLastMessageByAuthor) {
-            // Avatar
+            // 头像
             Image(
                 modifier = Modifier
                     .clickable(onClick = { onAuthorClick(msg.author) })
@@ -378,7 +376,7 @@ fun Message(
                 contentDescription = null,
             )
         } else {
-            // Space under avatar
+            // 头像下方间距
             Spacer(modifier = Modifier.width(74.dp))
         }
         AuthorAndTextMessage(
@@ -409,10 +407,10 @@ fun AuthorAndTextMessage(
         }
         ChatItemBubble(msg, isUserMe, authorClicked = authorClicked)
         if (isFirstMessageByAuthor) {
-            // Last bubble before next author
+            // 下一个作者出现前的最后一条消息气泡
             Spacer(modifier = Modifier.height(8.dp))
         } else {
-            // Between bubbles
+            // 同一作者消息气泡之间的间距
             Spacer(modifier = Modifier.height(4.dp))
         }
     }
@@ -420,14 +418,14 @@ fun AuthorAndTextMessage(
 
 @Composable
 private fun AuthorNameTimestamp(msg: Message) {
-    // Combine author and timestamp for a11y.
+    // 将作者和时间合并，便于无障碍朗读。
     Row(modifier = Modifier.semantics(mergeDescendants = true) {}) {
         Text(
             text = msg.author,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier
                 .alignBy(LastBaseline)
-                .paddingFrom(LastBaseline, after = 8.dp), // Space to 1st bubble
+                .paddingFrom(LastBaseline, after = 8.dp), // 首条消息气泡的顶部间距
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(

@@ -1,88 +1,56 @@
 <img src="screenshots/opencodelogo.png"/>
 
-# OpenCode sample
+# OpenCode Android Client
 
-OpenCode is a sample chat app built with [Jetpack Compose][compose].
+OpenCode Android Client 是一个基于 Jetpack Compose 的 OpenCode 移动端示例，
+用于连接局域网内的 OpenCode Server，选择项目并进行会话。
 
-To try out this sample app, use the latest stable version
-of [Android Studio](https://developer.android.com/studio).
-You can clone this repository or import the
-project from Android Studio following the steps
-[here](https://developer.android.com/jetpack/compose/setup#sample).
+## 快速开始
 
-This sample showcases:
+1. 使用最新稳定版 Android Studio 打开项目。
+2. 在你的开发机启动 OpenCode Server（示例）：
+   - `opencode serve --hostname 0.0.0.0 --port 4096 --mdns`
+3. 保证手机与服务端在同一局域网，启动 App 后会通过 mDNS 自动发现服务。
 
-* UI state management
-* Integration with Architecture Components: Navigation, Fragments, ViewModel
-* Back button handling
-* Text Input and focus management
-* Multiple types of animations and transitions
-* Saved state across configuration changes
-* Material Design 3 theming and Material You dynamic color
-* UI tests
+## 核心能力
+
+- mDNS 自动发现 `_opencode._tcp.` 服务
+- OpenCode 会话与项目选择
+- Build / Plan 模式切换
+- 模型与思考等级选择
+- 流式消息展示与状态管理
+- Material 3 主题与 OpenCode 风格设计令牌
+
+## 主要模块
+
+- `opencode/discovery`：封装服务发现逻辑（`NsdManager`）
+- `opencode/api`：OpenCode HTTP API 访问与 JSON 解析
+- `opencode/model`：服务、会话、项目、消息等客户端模型
+- `opencode/OpencodeViewModel`：发现、连接、会话与消息发送编排
+- `conversation/OpenCodeConversation.kt`：OpenCode 聊天界面
 
 ## Screenshots
 
-<img src="screenshots/screenshots.png"/>
+<img src="screenshots/01_服务器设置_preview.png" width="300"/>
+<img src="screenshots/02_会话记录_preview.png" width="300"/>
+<img src="screenshots/03_模型选择_preview.png" width="300"/>
+<img src="screenshots/04_消息1_preview.png" width="300"/>
+<img src="screenshots/05_消息2_preview.png" width="300"/>
+<img src="screenshots/06_消息3_preview.png" width="300"/>
+<img src="screenshots/07_主页_preview.png" width="300"/>
 
-<img src="screenshots/widget.png" width="300"/>
+## 测试
 
-<img src="screenshots/widget_discoverability.png" width="300"/>
+- 单元测试：`./gradlew :app:testDebugUnitTest`
+- UI 测试：`./gradlew :app:connectedDebugAndroidTest`
 
-### Status: 🚧 In progress
+关键测试目录：
+- `app/src/test/java/com/github/go_kenka/opencode/opencode`
+- `app/src/androidTest/java/com/github/go_kenka/opencode`
 
-OpenCode is still in under development, and some features are not yet implemented.
+## 当前状态
 
-## Features
-
-### UI State management
-The [ConversationContent](app/src/main/java/com/example/compose/opencode/conversation/Conversation.kt) composable is the entry point to this screen and takes a [ConversationUiState](app/src/main/java/com/example/compose/opencode/conversation/ConversationUiState.kt) that defines the data to be displayed. This doesn't mean all the state is served from a single point: composables can have their own state too. For an example, see `scrollState` in [ConversationContent](app/src/main/java/com/example/compose/opencode/conversation/Conversation.kt) or `currentInputSelector` in [UserInput](app/src/main/java/com/example/compose/opencode/conversation/UserInput.kt)
-
-### Architecture Components
-The [ProfileFragment](app/src/main/java/com/example/compose/opencode/profile/ProfileFragment.kt) shows how to pass data between fragments with the [Navigation component](https://developer.android.com/guide/navigation) and observe state from a
-[ViewModel](https://developer.android.com/topic/libraries/architecture/viewmodel), served via [LiveData](https://developer.android.com/topic/libraries/architecture/livedata).
-
-### Back button handling
-When the Emoji selector is shown, pressing back in the app closes it, intercepting any navigation events. The implementation can be found in [UserInput](app/src/main/java/com/example/compose/opencode/conversation/UserInput.kt).
-
-### Text Input and focus management
-When the Emoji panel is shown the keyboard must be hidden and vice versa. This is achieved with a combination of the [FocusRequester](https://developer.android.com/reference/kotlin/androidx/compose/ui/focus/FocusRequester) and [onFocusChanged](https://developer.android.com/reference/kotlin/androidx/compose/ui/focus/package-summary#(androidx.compose.ui.Modifier).onFocusChanged(kotlin.Function1)) APIs.
-
-### Multiple types of animations and transitions
-This sample uses animations ranging from simple `AnimatedVisibility` in [FunctionalityNotAvailablePanel](app/src/main/java/com/example/compose/opencode/conversation/UserInput.kt) to choreographed transitions found in the [FloatingActionButton](https://material.io/develop/android/components/floating-action-button) of the Profile screen and implemented in [AnimatingFabContent](app/src/main/java/com/example/compose/opencode/conversation/UserInput.kt)
-
-### Edge-to-edge UI with synchronized IME transitions
-This sample is laid out [edge-to-edge](https://medium.com/androiddevelopers/gesture-navigation-going-edge-to-edge-812f62e4e83e), drawing its content behind the system bars for a more immersive look.
-
-The sample also supports synchronized IME transitions when running on API 30+ devices. See the use of `Modifier.navigationBarsPadding().imePadding()` in [ConversationContent](app/src/main/java/com/example/compose/opencode/conversation/UserInput.kt).
-
-### Saved state across configuration changes
-Some composable state survives activity or process recreation, like `currentInputSelector` in [UserInput](app/src/main/java/com/example/compose/opencode/conversation/UserInput.kt).
-
-### Material Design 3 theming and Material You dynamic color
-OpenCode follows the [Material Design 3](https://m3.material.io) principles and uses the `MaterialTheme` composable and M3 components. On Android 12+ OpenCode supports Material You dynamic color, which extracts a custom color scheme from the device wallpaper. OpenCode uses a custom, branded color scheme as a fallback. It also implements custom typography using the Karla and Montserrat font families.
-
-### Nested scrolling interop
-OpenCode contains an example of how to use [`rememberNestedScrollInteropConnection()`](https://developer.android.com/reference/kotlin/androidx/compose/ui/platform/package-summary#rememberNestedScrollInteropConnection()) to achieve successful nested scroll interop between a View parent that implements `androidx.core.view.NestedScrollingParent3` and a Compose child. The example used here is a combination of a View parent `CoordinatorLayout` and a nested, Compose child `BoxWithConstraints` in [ProfileFragment](app/src/main/java/com/example/compose/opencode/profile/ProfileFragment.kt). 
-
-### UI tests
-In [androidTest](app/src/androidTest/java/com/example/compose/opencode) you'll find a suite of UI tests that showcase interesting patterns in Compose:
-
-#### [ConversationTest](app/src/androidTest/java/com/example/compose/opencode/ConversationTest.kt)
-UI tests for the Conversation screen. Includes a test that checks the behavior of the app when dark mode changes.
-
-#### [NavigationTest](app/src/androidTest/java/com/example/compose/opencode/NavigationTest.kt)
-Shows how to write tests that assert directly on the [Navigation Controller](https://developer.android.com/reference/androidx/navigation/NavController).
-
-#### [UserInputTest](app/src/androidTest/java/com/example/compose/opencode/UserInputTest.kt)
-Checks that the user input composable, including extended controls, behave as expected showing and hiding the keyboard.
-
-
-## Known issues
-1. If the emoji selector is shown, clicking on the TextField can sometimes show both input methods.
-Tracked in https://issuetracker.google.com/164859446
-
-2. There are only two profiles, clicking on anybody except "me" will show the same data.
+项目仍在持续迭代中，部分功能可能尚未完全实现。
 
 ## License
 ```
@@ -100,5 +68,3 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ```
-
-[compose]: https://developer.android.com/jetpack/compose

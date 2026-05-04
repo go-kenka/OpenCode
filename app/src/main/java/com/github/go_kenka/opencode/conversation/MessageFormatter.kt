@@ -30,31 +30,31 @@ import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
 
-// Regex containing the syntax tokens
+// 匹配 OpenCode 消息中支持的轻量 Markdown 语法标记。
 val symbolPattern by lazy {
     Regex("""(https?://[^\s\t\n]+)|(`[^`]+`)|(@\w+)|(\*\*[^*\n]+\*\*)|(\*[^*\n]+\*)|(_[^_\n]+_)|(~[^~\n]+~)""")
 }
 
-// Accepted annotations for the ClickableTextWrapper
+// ClickableText 可识别的注解类型。
 enum class SymbolAnnotationType {
     PERSON,
     LINK,
 }
 typealias StringAnnotation = AnnotatedString.Range<String>
-// Pair returning styled content and annotation for ClickableText when matching syntax token
+// 语法标记匹配后的渲染结果和可选注解。
 typealias SymbolAnnotation = Pair<AnnotatedString, StringAnnotation?>
 
 /**
- * Format a message following Markdown-lite syntax
- * | @username -> bold, primary color and clickable element
- * | http(s)://... -> clickable link, opening it into the browser
- * | *bold* -> bold
- * | _italic_ -> italic
- * | ~strikethrough~ -> strikethrough
- * | `MyClass.myMethod` -> inline code styling
+ * 按 OpenCode 聊天消息使用的轻量 Markdown 规则格式化文本。
+ * | @username -> 加粗、主色、可点击
+ * | http(s)://... -> 可点击链接
+ * | *bold* -> 加粗
+ * | _italic_ -> 斜体
+ * | ~strikethrough~ -> 删除线
+ * | `MyClass.myMethod` -> 行内代码样式
  *
- * @param text contains message to be parsed
- * @return AnnotatedString with annotations used inside the ClickableText wrapper
+ * @param text 待解析消息文本
+ * @return 用于 ClickableText 的 AnnotatedString
  */
 @Composable
 fun messageFormatter(text: String, primary: Boolean): AnnotatedString {
@@ -99,10 +99,10 @@ fun messageFormatter(text: String, primary: Boolean): AnnotatedString {
 }
 
 /**
- * Map regex matches found in a message with supported syntax symbols
+ * 将正则匹配结果映射为对应的文本样式和可选点击注解。
  *
- * @param matchResult is a regex result matching our syntax symbols
- * @return pair of AnnotatedString with annotation (optional) used inside the ClickableText wrapper
+ * @param matchResult 单条语法标记匹配结果
+ * @return 用于 ClickableText 的渲染文本与可选注解
  */
 private fun getSymbolAnnotation(
     matchResult: MatchResult,

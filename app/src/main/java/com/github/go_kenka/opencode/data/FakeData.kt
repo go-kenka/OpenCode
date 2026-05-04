@@ -50,10 +50,10 @@ val initialMessages = listOf(
     ),
     Message(
         "John Glenn",
-        "Compose newbie as well $EMOJI_FLAMINGO, have you looked at the JetNews sample? " +
-            "Most blog posts end up out of date pretty fast but this sample is always up to " +
-            "date and deals with async data loading (it's faked but the same idea " +
-            "applies) $EMOJI_POINTS https://goo.gle/jetnews",
+        "Compose newbie as well $EMOJI_FLAMINGO, have you looked at the OpenCode Android demo? " +
+            "Most blog posts get out of date quickly, but this project keeps up with OpenCode " +
+            "client patterns and async state handling (data here is mocked, but the idea " +
+            "is the same) $EMOJI_POINTS https://github.com/sst/opencode",
         "8:04 PM",
     ),
     Message(
@@ -89,7 +89,7 @@ val exampleUiState = ConversationUiState(
 )
 
 /**
- * Example colleague profile
+ * 示例同事资料卡
  */
 val colleagueProfile = ProfileScreenState(
     userId = "12345",
@@ -104,7 +104,7 @@ val colleagueProfile = ProfileScreenState(
 )
 
 /**
- * Example "me" profile.
+ * 示例当前用户资料卡
  */
 val meProfile = ProfileScreenState(
     userId = "me",
@@ -119,18 +119,18 @@ val meProfile = ProfileScreenState(
 )
 
 object EMOJIS {
-    // EMOJI 15
+    // Emoji 15
     const val EMOJI_PINK_HEART = "\uD83E\uDE77"
 
-    // EMOJI 14 🫠
+    // Emoji 14 🫠
     const val EMOJI_MELTING = "\uD83E\uDEE0"
 
-    // ANDROID 13.1 😶‍🌫️
+    // Android 13.1 😶‍🌫️
     const val EMOJI_CLOUDS = "\uD83D\uDE36\u200D\uD83C\uDF2B️"
 
-    // ANDROID 12.0 🦩
+    // Android 12.0 🦩
     const val EMOJI_FLAMINGO = "\uD83E\uDDA9"
 
-    // ANDROID 12.0  👉
+    // Android 12.0 👉
     const val EMOJI_POINTS = " \uD83D\uDC49"
 }
