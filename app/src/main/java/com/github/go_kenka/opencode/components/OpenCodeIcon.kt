@@ -40,12 +40,12 @@ fun OpenCodeIcon(contentDescription: String?, modifier: Modifier = Modifier) {
     }
     Box(modifier = modifier.then(semantics)) {
         Icon(
-            painter = painterResource(id = R.drawable.ic_jetchat_back),
+            painter = painterResource(id = R.drawable.ic_opencode_back),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primaryContainer,
         )
         Icon(
-            painter = painterResource(id = R.drawable.ic_jetchat_front),
+            painter = painterResource(id = R.drawable.ic_opencode_front),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
         )

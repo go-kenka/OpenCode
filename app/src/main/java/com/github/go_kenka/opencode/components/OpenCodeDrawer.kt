@@ -252,7 +252,7 @@ private fun SessionItem(
         verticalAlignment = CenterVertically,
     ) {
         Icon(
-            painter = painterResource(id = R.drawable.ic_jetchat),
+            painter = painterResource(id = R.drawable.ic_opencode),
             contentDescription = null,
             tint = if (selected) tokens.palette.accent else tokens.palette.textSecondary,
             modifier = Modifier.size(16.dp),

@@ -18,16 +18,7 @@
     <string name="app_name">Open Code</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
-    <string name="navigation_drawer_close">Close navigation drawer</string>
-    <string name="nav_header_title">Composer</string>
-    <string name="nav_header_subtitle">android.studio@android.com</string>
-    <string name="nav_header_desc">Navigation header</string>
 
-    <string name="menu_home">Home</string>
-    <string name="menu_gallery">Gallery</string>
-    <string name="menu_slideshow">Slideshow</string>
-    <string name="conversations">Conversations</string>
-    <string name="profile">Profile</string>
     <string name="jumpBottom">Jump to bottom</string>
     <string name="send">Send</string>
     <string name="author_me">me</string>
@@ -41,13 +32,10 @@
     <string name="message">Message</string>
     <string name="edit_profile">Edit Profile</string>
     <string name="profile_error">There was an error loading the profile</string>
-    <string name="bio">Bio</string>
     <string name="display_name">Display name</string>
     <string name="status">Status</string>
     <string name="timezone">Timezone</string>
     <string name="twitter">Twitter</string>
-    <string name="common_channels">Channels in common</string>
-    <string name="lorem">Lorem or Ipsum</string>
 
     <!-- Accessibility descriptions -->
 
@@ -67,6 +55,5 @@
     <string name="touch_and_hold_to_record">Touch and hold to record</string>
     <string name="record_message">Record voice message</string>
     <string name="messages_widget_title">OpenCode unread messages</string>
-    <string name="add_widget_to_home_page">Add Widget to Home Page</string>
 
 </resources>

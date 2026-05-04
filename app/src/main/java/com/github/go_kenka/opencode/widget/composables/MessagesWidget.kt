@@ -42,7 +42,7 @@ import com.github.go_kenka.opencode.widget.theme.OpenCodeGlanceColorScheme
 fun MessagesWidget(messages: List<Message>) {
     Scaffold(titleBar = {
         TitleBar(
-            startIcon = ImageProvider(R.drawable.ic_jetchat),
+            startIcon = ImageProvider(R.drawable.ic_opencode),
             iconColor = null,
             title = LocalContext.current.getString(R.string.messages_widget_title),
         )

@@ -4,7 +4,7 @@
 
 **目标：** 将当前 Android 客户端的 OpenCode 页面主题配色、圆角、边框和组件层次统一到接近官方 OpenCode 风格，保证视觉一致性与可维护性。
 
-**架构：** 采用“设计令牌（Design Tokens）+ 组件映射”的方式，不直接在页面里散落颜色/圆角常量。先新增 OpenCode 专用主题令牌与单元测试，再把 `OpenCodeConversation` 和 `JetchatDrawer` 迁移到令牌驱动，最后通过 Compose UI 契约测试锁定关键视觉结构（边框存在、toolbar 背景、弹窗样式）。
+**架构：** 采用“设计令牌（Design Tokens）+ 组件映射”的方式，不直接在页面里散落颜色/圆角常量。先新增 OpenCode 专用主题令牌与单元测试，再把 `OpenCodeConversation` 和 `OpenCodeDrawer` 迁移到令牌驱动，最后通过 Compose UI 契约测试锁定关键视觉结构（边框存在、toolbar 背景、弹窗样式）。
 
 **技术栈：** Kotlin、Jetpack Compose (Material3)、JUnit4、Compose UI Test
 
@@ -12,22 +12,22 @@
 
 ## 文件结构（先锁定边界）
 
-- 创建：`app/src/main/java/com/example/compose/jetchat/theme/OpenCodeDesignTokens.kt`
+- 创建：`app/src/main/java/com/example/compose/opencode/theme/OpenCodeDesignTokens.kt`
 - 职责：定义 OpenCode 专用色板、圆角、间距、描边厚度、组件尺寸，提供 `@Composable opencodeTokens()`。
 
-- 创建：`app/src/test/java/com/example/compose/jetchat/theme/OpenCodeDesignTokensTest.kt`
+- 创建：`app/src/test/java/com/example/compose/opencode/theme/OpenCodeDesignTokensTest.kt`
 - 职责：验证关键 token（主色、浅色背景、圆角级别、边框宽度）不回归。
 
-- 修改：`app/src/main/java/com/example/compose/jetchat/conversation/OpenCodeConversation.kt`
+- 修改：`app/src/main/java/com/example/compose/opencode/conversation/OpenCodeConversation.kt`
 - 职责：移除分散的颜色/圆角硬编码；统一顶栏、消息气泡、输入区、toolbar、弹窗到底层令牌；补充语义 tag 供 UI 测试。
 
-- 修改：`app/src/main/java/com/example/compose/jetchat/components/JetchatDrawer.kt`
+- 修改：`app/src/main/java/com/example/compose/opencode/components/OpenCodeDrawer.kt`
 - 职责：将抽屉搜索框、会话卡片、底部设置入口的圆角/描边/背景迁移到 OpenCode 令牌，避免和主页面风格断裂。
 
-- 创建：`app/src/androidTest/java/com/example/compose/jetchat/opencode/OpenCodeVisualStyleTest.kt`
+- 创建：`app/src/androidTest/java/com/example/compose/opencode/opencode/OpenCodeVisualStyleTest.kt`
 - 职责：验证关键视觉契约（输入区边框、toolbar 背景存在、agent/model 使用弹窗、圆角层级）
 
-- 修改：`app/src/androidTest/java/com/example/compose/jetchat/Utils.kt`
+- 修改：`app/src/androidTest/java/com/example/compose/opencode/Utils.kt`
 - 职责：补充一个测试宿主 `setOpenCodeContent {}` 辅助函数，避免重复样板。
 
 ---
@@ -35,14 +35,14 @@
 ### 任务 1：建立 OpenCode 设计令牌与单元测试
 
 **文件：**
-- 创建：`app/src/main/java/com/example/compose/jetchat/theme/OpenCodeDesignTokens.kt`
-- 创建：`app/src/test/java/com/example/compose/jetchat/theme/OpenCodeDesignTokensTest.kt`
-- 测试：`app/src/test/java/com/example/compose/jetchat/theme/OpenCodeDesignTokensTest.kt`
+- 创建：`app/src/main/java/com/example/compose/opencode/theme/OpenCodeDesignTokens.kt`
+- 创建：`app/src/test/java/com/example/compose/opencode/theme/OpenCodeDesignTokensTest.kt`
+- 测试：`app/src/test/java/com/example/compose/opencode/theme/OpenCodeDesignTokensTest.kt`
 
 - [ ] **步骤 1：编写失败的 token 单元测试**
 
 ```kotlin
-package com.example.compose.jetchat.theme
+package com.example.compose.opencode.theme
 
 import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
@@ -77,7 +77,7 @@ class OpenCodeDesignTokensTest {
 - [ ] **步骤 3：编写最少实现代码（令牌）**
 
 ```kotlin
-package com.example.compose.jetchat.theme
+package com.example.compose.opencode.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -149,7 +149,7 @@ fun opencodeTokens(): OpenCodeTokens {
 - [ ] **步骤 5：Commit**
 
 ```bash
-git add app/src/main/java/com/example/compose/jetchat/theme/OpenCodeDesignTokens.kt app/src/test/java/com/example/compose/jetchat/theme/OpenCodeDesignTokensTest.kt
+git add app/src/main/java/com/example/compose/opencode/theme/OpenCodeDesignTokens.kt app/src/test/java/com/example/compose/opencode/theme/OpenCodeDesignTokensTest.kt
 git commit -m "feat(theme): add opencode design tokens with unit tests"
 ```
 
@@ -158,20 +158,20 @@ git commit -m "feat(theme): add opencode design tokens with unit tests"
 ### 任务 2：迁移 OpenCodeConversation 到令牌驱动（含输入区与弹窗风格）
 
 **文件：**
-- 修改：`app/src/main/java/com/example/compose/jetchat/conversation/OpenCodeConversation.kt`
-- 测试：`app/src/androidTest/java/com/example/compose/jetchat/opencode/OpenCodeVisualStyleTest.kt`
+- 修改：`app/src/main/java/com/example/compose/opencode/conversation/OpenCodeConversation.kt`
+- 测试：`app/src/androidTest/java/com/example/compose/opencode/opencode/OpenCodeVisualStyleTest.kt`
 
 - [ ] **步骤 1：编写失败的 UI 契约测试（输入区边框 + toolbar 浅背景）**
 
 ```kotlin
-package com.example.compose.jetchat.opencode
+package com.example.compose.opencode.opencode
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import com.example.compose.jetchat.conversation.OpenCodeConversationScreen
-import com.example.compose.jetchat.opencode.model.OpenCodeUiState
+import com.example.compose.opencode.conversation.OpenCodeConversationScreen
+import com.example.compose.opencode.opencode.model.OpenCodeUiState
 import org.junit.Rule
 import org.junit.Test
 
@@ -201,7 +201,7 @@ class OpenCodeVisualStyleTest {
 
 - [ ] **步骤 2：运行测试验证失败**
 
-运行：`./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.example.compose.jetchat.opencode.OpenCodeVisualStyleTest`
+运行：`./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.example.compose.opencode.opencode.OpenCodeVisualStyleTest`
 预期：FAIL，报错 `No node found with tag opencode_composer_container`。
 
 - [ ] **步骤 3：编写最少实现代码（令牌映射 + testTag）**
@@ -209,7 +209,7 @@ class OpenCodeVisualStyleTest {
 ```kotlin
 // OpenCodeConversation.kt 关键片段
 import androidx.compose.ui.platform.testTag
-import com.example.compose.jetchat.theme.opencodeTokens
+import com.example.compose.opencode.theme.opencodeTokens
 
 @Composable
 private fun ComposerBar(...) {
@@ -249,13 +249,13 @@ private fun ComposerBar(...) {
 
 - [ ] **步骤 4：运行测试验证通过**
 
-运行：`./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.example.compose.jetchat.opencode.OpenCodeVisualStyleTest`
+运行：`./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.example.compose.opencode.opencode.OpenCodeVisualStyleTest`
 预期：PASS，3 个节点都能找到。
 
 - [ ] **步骤 5：Commit**
 
 ```bash
-git add app/src/main/java/com/example/compose/jetchat/conversation/OpenCodeConversation.kt app/src/androidTest/java/com/example/compose/jetchat/opencode/OpenCodeVisualStyleTest.kt
+git add app/src/main/java/com/example/compose/opencode/conversation/OpenCodeConversation.kt app/src/androidTest/java/com/example/compose/opencode/opencode/OpenCodeVisualStyleTest.kt
 git commit -m "refactor(ui): migrate opencode conversation to design tokens"
 ```
 
@@ -264,8 +264,8 @@ git commit -m "refactor(ui): migrate opencode conversation to design tokens"
 ### 任务 3：抽屉样式同步（搜索框/会话卡片/设置入口）
 
 **文件：**
-- 修改：`app/src/main/java/com/example/compose/jetchat/components/JetchatDrawer.kt`
-- 测试：`app/src/androidTest/java/com/example/compose/jetchat/opencode/OpenCodeVisualStyleTest.kt`
+- 修改：`app/src/main/java/com/example/compose/opencode/components/OpenCodeDrawer.kt`
+- 测试：`app/src/androidTest/java/com/example/compose/opencode/opencode/OpenCodeVisualStyleTest.kt`
 
 - [ ] **步骤 1：编写失败的抽屉样式测试**
 
@@ -273,7 +273,7 @@ git commit -m "refactor(ui): migrate opencode conversation to design tokens"
 @Test
 fun drawer_uses_opencode_card_style() {
     composeRule.setContent {
-        JetchatDrawerContent(
+        OpenCodeDrawerContent(
             sessions = emptyList(),
             selectedSessionId = null,
             onSessionClicked = {},
@@ -288,18 +288,18 @@ fun drawer_uses_opencode_card_style() {
 
 - [ ] **步骤 2：运行测试验证失败**
 
-运行：`./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.example.compose.jetchat.opencode.OpenCodeVisualStyleTest`
+运行：`./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.example.compose.opencode.opencode.OpenCodeVisualStyleTest`
 预期：FAIL，缺少 `opencode_drawer_search`。
 
 - [ ] **步骤 3：编写最少实现代码（抽屉迁移）**
 
 ```kotlin
-// JetchatDrawer.kt 关键片段
+// OpenCodeDrawer.kt 关键片段
 import androidx.compose.ui.platform.testTag
-import com.example.compose.jetchat.theme.opencodeTokens
+import com.example.compose.opencode.theme.opencodeTokens
 
 @Composable
-fun JetchatDrawerContent(...) {
+fun OpenCodeDrawerContent(...) {
     val tokens = opencodeTokens()
     val palette = tokens.palette
 
@@ -332,13 +332,13 @@ private fun SettingsItem(onClick: () -> Unit) {
 
 - [ ] **步骤 4：运行测试验证通过**
 
-运行：`./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.example.compose.jetchat.opencode.OpenCodeVisualStyleTest`
+运行：`./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.example.compose.opencode.opencode.OpenCodeVisualStyleTest`
 预期：PASS，抽屉搜索和设置节点可检出。
 
 - [ ] **步骤 5：Commit**
 
 ```bash
-git add app/src/main/java/com/example/compose/jetchat/components/JetchatDrawer.kt app/src/androidTest/java/com/example/compose/jetchat/opencode/OpenCodeVisualStyleTest.kt
+git add app/src/main/java/com/example/compose/opencode/components/OpenCodeDrawer.kt app/src/androidTest/java/com/example/compose/opencode/opencode/OpenCodeVisualStyleTest.kt
 git commit -m "refactor(drawer): align drawer styling with opencode tokens"
 ```
 
@@ -347,9 +347,9 @@ git commit -m "refactor(drawer): align drawer styling with opencode tokens"
 ### 任务 4：统一主题入口与回归验证（防止动态颜色漂移）
 
 **文件：**
-- 修改：`app/src/main/java/com/example/compose/jetchat/theme/Themes.kt`
-- 修改：`app/src/main/java/com/example/compose/jetchat/conversation/ConversationFragment.kt`
-- 测试：`app/src/test/java/com/example/compose/jetchat/theme/OpenCodeDesignTokensTest.kt`
+- 修改：`app/src/main/java/com/example/compose/opencode/theme/Themes.kt`
+- 修改：`app/src/main/java/com/example/compose/opencode/conversation/ConversationFragment.kt`
+- 测试：`app/src/test/java/com/example/compose/opencode/theme/OpenCodeDesignTokensTest.kt`
 
 - [ ] **步骤 1：编写失败的主题回归测试**
 
@@ -372,7 +372,7 @@ fun opencode_theme_disables_dynamic_color_for_brand_surface() {
 ```kotlin
 // Themes.kt 关键片段
 @Composable
-fun JetchatTheme(
+fun OpenCodeTheme(
     isDarkTheme: Boolean = isSystemInDarkTheme(),
     isDynamicColor: Boolean = false,
     content: @Composable () -> Unit,
@@ -381,17 +381,17 @@ fun JetchatTheme(
     val myColorScheme = when {
         dynamicColor && isDarkTheme -> dynamicDarkColorScheme(LocalContext.current)
         dynamicColor && !isDarkTheme -> dynamicLightColorScheme(LocalContext.current)
-        isDarkTheme -> JetchatDarkColorScheme
-        else -> JetchatLightColorScheme
+        isDarkTheme -> OpenCodeDarkColorScheme
+        else -> OpenCodeLightColorScheme
     }
 
-    MaterialTheme(colorScheme = myColorScheme, typography = JetchatTypography, content = content)
+    MaterialTheme(colorScheme = myColorScheme, typography = OpenCodeTypography, content = content)
 }
 ```
 
 ```kotlin
 // ConversationFragment.kt 关键片段
-JetchatTheme(isDynamicColor = false) {
+OpenCodeTheme(isDynamicColor = false) {
     OpenCodeConversationScreen(...)
 }
 ```
@@ -407,7 +407,7 @@ JetchatTheme(isDynamicColor = false) {
 - [ ] **步骤 5：Commit**
 
 ```bash
-git add app/src/main/java/com/example/compose/jetchat/theme/Themes.kt app/src/main/java/com/example/compose/jetchat/conversation/ConversationFragment.kt app/src/test/java/com/example/compose/jetchat/theme/OpenCodeDesignTokensTest.kt
+git add app/src/main/java/com/example/compose/opencode/theme/Themes.kt app/src/main/java/com/example/compose/opencode/conversation/ConversationFragment.kt app/src/test/java/com/example/compose/opencode/theme/OpenCodeDesignTokensTest.kt
 git commit -m "fix(theme): lock opencode brand style by disabling dynamic color"
 ```
 

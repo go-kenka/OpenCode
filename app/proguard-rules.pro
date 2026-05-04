@@ -20,8 +20,9 @@
 # hide the original source file name.
 -renamesourcefileattribute SourceFile
 
-# Repackage classes into the top-level.
--repackageclasses
+# Avoid repackaging all classes; this can break reflection-based class lookups
+# used by AndroidX libraries at runtime (e.g. WorkManager/Room generated impls).
+# -repackageclasses
 
 # This is generated automatically by the Android Gradle plugin.
 -dontwarn org.bouncycastle.jsse.BCSSLParameters
@@ -36,3 +37,11 @@
 
 
 -keep class androidx.compose.ui.platform.AndroidCompositionLocals_androidKt { *; }
+
+# Navigation inflates Fragment destinations from class-name strings in nav XML.
+# Keep Fragment class names stable to avoid ClassNotFoundException in release.
+-keepnames class * extends androidx.fragment.app.Fragment
+
+# WorkManager initializes its Room database via reflection.
+-keep class androidx.work.impl.WorkDatabase { *; }
+-keep class androidx.work.impl.WorkDatabase_Impl { *; }

@@ -2,7 +2,7 @@
 
 > **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
 
-**目标：** 在现有 Android Jetchat 示例中实现 OpenCode 手机端 MVP：mDNS 自动发现、顶部项目选择、暗色聊天输入界面和 Build/Plan/模型/思考等级选择。
+**目标：** 在现有 Android OpenCode 示例中实现 OpenCode 手机端 MVP：mDNS 自动发现、顶部项目选择、暗色聊天输入界面和 Build/Plan/模型/思考等级选择。
 
 **架构：** 新增 `opencode` 包封装发现、API、模型和 ViewModel；改造 `conversation` 页面渲染 OpenCode UI。所有网络和发现逻辑离开 Composable，UI 只消费 `StateFlow` 状态和事件回调。
 
@@ -12,25 +12,25 @@
 
 ## 文件结构
 
-- 创建：`app/src/main/java/com/example/compose/jetchat/opencode/model/OpenCodeModels.kt`，客户端模型、UI 状态、选择项。
-- 创建：`app/src/main/java/com/example/compose/jetchat/opencode/api/OpenCodeJson.kt`，JSON 解析和请求构建纯函数。
-- 创建：`app/src/main/java/com/example/compose/jetchat/opencode/api/OpenCodeClient.kt`，OkHttp API client。
-- 创建：`app/src/main/java/com/example/compose/jetchat/opencode/discovery/OpenCodeDiscovery.kt`，mDNS discovery 接口与 NsdManager 实现。
-- 创建：`app/src/main/java/com/example/compose/jetchat/opencode/OpencodeViewModel.kt`，状态机和业务编排。
-- 创建：`app/src/main/java/com/example/compose/jetchat/conversation/OpenCodeConversation.kt`，OpenCode 风格 Compose UI。
-- 修改：`app/src/main/java/com/example/compose/jetchat/conversation/ConversationFragment.kt`，接入新 ViewModel/UI。
+- 创建：`app/src/main/java/com/example/compose/opencode/opencode/model/OpenCodeModels.kt`，客户端模型、UI 状态、选择项。
+- 创建：`app/src/main/java/com/example/compose/opencode/opencode/api/OpenCodeJson.kt`，JSON 解析和请求构建纯函数。
+- 创建：`app/src/main/java/com/example/compose/opencode/opencode/api/OpenCodeClient.kt`，OkHttp API client。
+- 创建：`app/src/main/java/com/example/compose/opencode/opencode/discovery/OpenCodeDiscovery.kt`，mDNS discovery 接口与 NsdManager 实现。
+- 创建：`app/src/main/java/com/example/compose/opencode/opencode/OpencodeViewModel.kt`，状态机和业务编排。
+- 创建：`app/src/main/java/com/example/compose/opencode/conversation/OpenCodeConversation.kt`，OpenCode 风格 Compose UI。
+- 修改：`app/src/main/java/com/example/compose/opencode/conversation/ConversationFragment.kt`，接入新 ViewModel/UI。
 - 修改：`app/src/main/AndroidManifest.xml`，增加网络和 mDNS 所需权限，允许 HTTP cleartext。
 - 修改：`app/build.gradle.kts`，增加 OkHttp 和本地单元测试依赖。
-- 创建：`app/src/test/java/com/example/compose/jetchat/opencode/api/OpenCodeJsonTest.kt`，JSON 行为测试。
-- 创建：`app/src/test/java/com/example/compose/jetchat/opencode/model/OpenCodeModelsTest.kt`，项目聚合和 URL 行为测试。
+- 创建：`app/src/test/java/com/example/compose/opencode/opencode/api/OpenCodeJsonTest.kt`，JSON 行为测试。
+- 创建：`app/src/test/java/com/example/compose/opencode/opencode/model/OpenCodeModelsTest.kt`，项目聚合和 URL 行为测试。
 
 ## 任务 1：模型和 JSON 纯函数
 
 **文件：**
-- 创建：`app/src/main/java/com/example/compose/jetchat/opencode/model/OpenCodeModels.kt`
-- 创建：`app/src/main/java/com/example/compose/jetchat/opencode/api/OpenCodeJson.kt`
-- 测试：`app/src/test/java/com/example/compose/jetchat/opencode/model/OpenCodeModelsTest.kt`
-- 测试：`app/src/test/java/com/example/compose/jetchat/opencode/api/OpenCodeJsonTest.kt`
+- 创建：`app/src/main/java/com/example/compose/opencode/opencode/model/OpenCodeModels.kt`
+- 创建：`app/src/main/java/com/example/compose/opencode/opencode/api/OpenCodeJson.kt`
+- 测试：`app/src/test/java/com/example/compose/opencode/opencode/model/OpenCodeModelsTest.kt`
+- 测试：`app/src/test/java/com/example/compose/opencode/opencode/api/OpenCodeJsonTest.kt`
 
 - [ ] **步骤 1：编写失败测试**
 
@@ -53,8 +53,8 @@
 ## 任务 2：mDNS discovery 和 HTTP client
 
 **文件：**
-- 创建：`app/src/main/java/com/example/compose/jetchat/opencode/discovery/OpenCodeDiscovery.kt`
-- 创建：`app/src/main/java/com/example/compose/jetchat/opencode/api/OpenCodeClient.kt`
+- 创建：`app/src/main/java/com/example/compose/opencode/opencode/discovery/OpenCodeDiscovery.kt`
+- 创建：`app/src/main/java/com/example/compose/opencode/opencode/api/OpenCodeClient.kt`
 - 修改：`app/src/main/AndroidManifest.xml`
 - 修改：`app/build.gradle.kts`
 
@@ -78,7 +78,7 @@
 ## 任务 3：ViewModel 状态机
 
 **文件：**
-- 创建：`app/src/main/java/com/example/compose/jetchat/opencode/OpencodeViewModel.kt`
+- 创建：`app/src/main/java/com/example/compose/opencode/opencode/OpencodeViewModel.kt`
 
 - [ ] **步骤 1：实现状态机**
 
@@ -96,8 +96,8 @@ ViewModel 启动 discovery；发现服务后连接；从 sessions 聚合项目�
 ## 任务 4：Compose UI 改造
 
 **文件：**
-- 创建：`app/src/main/java/com/example/compose/jetchat/conversation/OpenCodeConversation.kt`
-- 修改：`app/src/main/java/com/example/compose/jetchat/conversation/ConversationFragment.kt`
+- 创建：`app/src/main/java/com/example/compose/opencode/conversation/OpenCodeConversation.kt`
+- 修改：`app/src/main/java/com/example/compose/opencode/conversation/ConversationFragment.kt`
 
 - [ ] **步骤 1：实现暗色页面**
 

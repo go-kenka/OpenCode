@@ -41,8 +41,4 @@
         <item name="postSplashScreenTheme">@style/Theme.OpenCode.NoActionBar</item>
     </style>
 
-    <style name="Theme.OpenCode.AppBarOverlay" parent="ThemeOverlay.MaterialComponents.Dark.ActionBar" />
-
-    <style name="Theme.OpenCode.PopupOverlay" parent="ThemeOverlay.MaterialComponents.Light" />
-
 </resources>
