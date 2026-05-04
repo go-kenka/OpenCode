@@ -175,14 +175,14 @@ data class OpenCodeModelOption(
 }
 
 enum class ThinkingLevel(val label: String) {
-    DEFAULT("默认"),
-    LOW("低"),
-    MEDIUM("中"),
-    HIGH("高"),
+    DEFAULT("Default"),
+    LOW("Low"),
+    MEDIUM("Medium"),
+    HIGH("High"),
 }
 
 data class OpenCodeUiState(
-    val discoveryStatus: String = "正在通过 mDNS 搜索 OpenCode 服务...",
+    val discoveryStatus: String = "Searching OpenCode services via mDNS...",
     val discoveredServices: List<OpenCodeService> = emptyList(),
     val pendingServiceSelection: Boolean = false,
     val pendingService: OpenCodeService? = null,

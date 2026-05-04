@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,18 +39,23 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,6 +75,10 @@ fun OpenCodeDrawerContent(
     sessions: List<OpenCodeSession>,
     selectedSessionId: String?,
     onSessionClicked: (String) -> Unit,
+    uiLanguage: UiLanguage,
+    themeMode: ThemeMode,
+    onLanguageChanged: (UiLanguage) -> Unit,
+    onThemeModeChanged: (ThemeMode) -> Unit,
 ) {
     val tokens = opencodeTokens()
     val spacing = tokens.spacing
@@ -92,7 +102,7 @@ fun OpenCodeDrawerContent(
         DrawerHeader()
         HorizontalDivider(color = tokens.palette.borderTertiary)
 
-        DrawerItemHeader("会话")
+        DrawerItemHeader(stringResource(R.string.drawer_sessions))
         DrawerSearchField(
             value = query,
             onValueChange = { query = it },
@@ -109,7 +119,7 @@ fun OpenCodeDrawerContent(
         ) {
             if (filtered.isEmpty()) {
                 Text(
-                    text = "暂无会话",
+                    text = stringResource(R.string.drawer_no_sessions),
                     style = MaterialTheme.typography.bodyMedium,
                     color = tokens.palette.textSecondary,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
@@ -129,6 +139,14 @@ fun OpenCodeDrawerContent(
                 }
             }
         }
+
+        HorizontalDivider(color = tokens.palette.borderTertiary)
+        DrawerPreferencesSection(
+            uiLanguage = uiLanguage,
+            themeMode = themeMode,
+            onLanguageChanged = onLanguageChanged,
+            onThemeModeChanged = onThemeModeChanged,
+        )
     }
 }
 
@@ -152,7 +170,7 @@ private fun DrawerHeader() {
                 fontWeight = FontWeight.Medium,
             )
             Text(
-                text = "最近会话",
+                text = stringResource(R.string.drawer_recent_sessions),
                 fontSize = typography.small,
                 color = tokens.palette.textSecondary,
             )
@@ -197,7 +215,7 @@ private fun DrawerSearchField(
                 Box(modifier = Modifier.weight(1f)) {
                     if (value.isBlank()) {
                         Text(
-                            text = "搜索会话",
+                            text = stringResource(R.string.drawer_search_sessions),
                             color = tokens.palette.textSecondary,
                             fontSize = typography.base,
                             maxLines = 1,
@@ -208,6 +226,211 @@ private fun DrawerSearchField(
             }
         },
     )
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun DrawerPreferencesSection(
+    uiLanguage: UiLanguage,
+    themeMode: ThemeMode,
+    onLanguageChanged: (UiLanguage) -> Unit,
+    onThemeModeChanged: (ThemeMode) -> Unit,
+) {
+    val tokens = opencodeTokens()
+    val spacing = tokens.spacing
+    val languageOptions = listOf(
+        PreferenceOption(UiLanguage.SYSTEM, stringResource(R.string.language_system), leadingEmoji = "🌐"),
+        PreferenceOption(UiLanguage.ZH, stringResource(R.string.language_zh), leadingEmoji = "🇨🇳"),
+        PreferenceOption(UiLanguage.EN, stringResource(R.string.language_en), leadingEmoji = "🇺🇸"),
+    )
+    val themeOptions = listOf(
+        PreferenceOption(ThemeMode.SYSTEM, stringResource(R.string.theme_system), leadingIconRes = R.drawable.ic_settings),
+        PreferenceOption(ThemeMode.LIGHT, stringResource(R.string.theme_light), leadingIconRes = R.drawable.ic_light_mode),
+        PreferenceOption(ThemeMode.DARK, stringResource(R.string.theme_dark), leadingIconRes = R.drawable.ic_dark_mode),
+    )
+    var showLanguageSheet by rememberSaveable { mutableStateOf(false) }
+    var showThemeSheet by rememberSaveable { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = spacing.xs),
+    ) {
+        DrawerPreferenceRow(
+            iconRes = R.drawable.ic_language,
+            label = stringResource(R.string.drawer_language),
+            value = languageOptions.firstOrNull { it.value == uiLanguage }?.label.orEmpty(),
+            onClick = { showLanguageSheet = true },
+        )
+        HorizontalDivider(color = tokens.palette.borderTertiary)
+        DrawerPreferenceRow(
+            iconRes = R.drawable.ic_theme,
+            label = stringResource(R.string.drawer_theme),
+            value = themeOptions.firstOrNull { it.value == themeMode }?.label.orEmpty(),
+            onClick = { showThemeSheet = true },
+        )
+    }
+
+    if (showLanguageSheet) {
+        PreferenceSelectionSheet(
+            title = stringResource(R.string.drawer_language),
+            selectedValue = uiLanguage,
+            options = languageOptions,
+            onDismiss = { showLanguageSheet = false },
+            onSelected = {
+                onLanguageChanged(it)
+                showLanguageSheet = false
+            },
+        )
+    }
+    if (showThemeSheet) {
+        PreferenceSelectionSheet(
+            title = stringResource(R.string.drawer_theme),
+            selectedValue = themeMode,
+            options = themeOptions,
+            onDismiss = { showThemeSheet = false },
+            onSelected = {
+                onThemeModeChanged(it)
+                showThemeSheet = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun DrawerPreferenceRow(
+    iconRes: Int,
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+) {
+    val tokens = opencodeTokens()
+    val spacing = tokens.spacing
+    val shape = RoundedCornerShape(tokens.shapes.medium)
+    Row(
+        modifier = Modifier
+            .clip(shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = spacing.md, vertical = spacing.sm)
+            .fillMaxWidth(),
+        verticalAlignment = CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            tint = tokens.palette.textSecondary,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(modifier = Modifier.width(spacing.sm))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = tokens.palette.textSecondary,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = tokens.palette.textPrimary,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+        Icon(
+            painter = painterResource(id = R.drawable.ic_chevron_down),
+            contentDescription = null,
+            tint = tokens.palette.textSecondary,
+            modifier = Modifier
+                .size(16.dp)
+                .rotate(-90f),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun <T> PreferenceSelectionSheet(
+    title: String,
+    selectedValue: T,
+    options: List<PreferenceOption<T>>,
+    onDismiss: () -> Unit,
+    onSelected: (T) -> Unit,
+) {
+    val tokens = opencodeTokens()
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = tokens.palette.surface,
+        contentColor = tokens.palette.textPrimary,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = tokens.palette.textPrimary,
+            modifier = Modifier.padding(horizontal = tokens.spacing.lg, vertical = tokens.spacing.sm),
+        )
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            items(options) { option ->
+                val selected = option.value == selectedValue
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelected(option.value) }
+                        .padding(horizontal = tokens.spacing.lg, vertical = tokens.spacing.sm),
+                    verticalAlignment = CenterVertically,
+                ) {
+                    if (option.leadingIconRes != null) {
+                        Icon(
+                            painter = painterResource(id = option.leadingIconRes),
+                            contentDescription = null,
+                            tint = tokens.palette.textSecondary,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(modifier = Modifier.width(tokens.spacing.sm))
+                    } else if (option.leadingEmoji != null) {
+                        Text(
+                            text = option.leadingEmoji,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Spacer(modifier = Modifier.width(tokens.spacing.sm))
+                    }
+                    Text(
+                        text = option.label,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (selected) tokens.palette.accent else tokens.palette.textPrimary,
+                        fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (selected) {
+                        Text(
+                            text = "✓",
+                            color = tokens.palette.accent,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+                HorizontalDivider(color = tokens.palette.borderTertiary)
+            }
+        }
+        Spacer(modifier = Modifier.height(tokens.spacing.lg))
+    }
+}
+
+private data class PreferenceOption<T>(
+    val value: T,
+    val label: String,
+    val leadingIconRes: Int? = null,
+    val leadingEmoji: String? = null,
+)
+
+enum class UiLanguage {
+    SYSTEM,
+    ZH,
+    EN,
+}
+
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK,
 }
 
 @Composable
@@ -295,6 +518,10 @@ fun DrawerPreview() {
                 ),
                 selectedSessionId = "s1",
                 onSessionClicked = {},
+                uiLanguage = UiLanguage.SYSTEM,
+                themeMode = ThemeMode.SYSTEM,
+                onLanguageChanged = {},
+                onThemeModeChanged = {},
             )
         }
     }

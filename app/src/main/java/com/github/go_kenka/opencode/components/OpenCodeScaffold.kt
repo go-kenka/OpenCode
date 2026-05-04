@@ -33,7 +33,11 @@ fun OpenCodeDrawer(
     drawerState: DrawerState = rememberDrawerState(initialValue = Closed),
     selectedSessionId: String?,
     sessions: List<OpenCodeSession>,
+    uiLanguage: UiLanguage,
+    themeMode: ThemeMode,
     onSessionClicked: (String) -> Unit,
+    onLanguageChanged: (UiLanguage) -> Unit,
+    onThemeModeChanged: (ThemeMode) -> Unit,
     content: @Composable () -> Unit,
 ) {
     OpenCodeTheme {
@@ -54,6 +58,10 @@ fun OpenCodeDrawer(
                         sessions = sessions,
                         selectedSessionId = selectedSessionId,
                         onSessionClicked = onSessionClicked,
+                        uiLanguage = uiLanguage,
+                        themeMode = themeMode,
+                        onLanguageChanged = onLanguageChanged,
+                        onThemeModeChanged = onThemeModeChanged,
                     )
                 }
             },

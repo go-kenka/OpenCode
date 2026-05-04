@@ -20,6 +20,18 @@ class OpencodePreferences(context: Context) {
         prefs.edit().putString(KEY_SELECTED_SERVICE, serviceKey).apply()
     }
 
+    fun getAppLanguage(): String = prefs.getString(KEY_APP_LANGUAGE, APP_LANGUAGE_SYSTEM) ?: APP_LANGUAGE_SYSTEM
+
+    fun saveAppLanguage(language: String) {
+        prefs.edit().putString(KEY_APP_LANGUAGE, language).apply()
+    }
+
+    fun getThemeMode(): String = prefs.getString(KEY_THEME_MODE, THEME_SYSTEM) ?: THEME_SYSTEM
+
+    fun saveThemeMode(themeMode: String) {
+        prefs.edit().putString(KEY_THEME_MODE, themeMode).apply()
+    }
+
     fun getManualServices(): List<OpenCodeService> {
         val raw = prefs.getString(KEY_MANUAL_SERVICES, null) ?: return emptyList()
         return runCatching {
@@ -204,6 +216,8 @@ class OpencodePreferences(context: Context) {
         private const val PREF_NAME = "opencode_prefs"
         private const val KEY_SELECTED_SERVICE = "selected_service"
         private const val KEY_MANUAL_SERVICES = "manual_services"
+        private const val KEY_APP_LANGUAGE = "app_language"
+        private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_SELECTED_PROJECT_PREFIX = "selected_project:"
         private const val KEY_SELECTED_PROJECT_DIRECTORY_PREFIX = "selected_project_directory:"
         private const val KEY_SELECTED_SESSION_PREFIX = "selected_session:"
@@ -214,5 +228,13 @@ class OpencodePreferences(context: Context) {
         private const val KEY_MODEL_ID_PREFIX = "selection_model_id:"
         private const val KEY_SESSION_MESSAGES_PREFIX = "session_messages:"
         private const val MAX_SAVED_MESSAGES_PER_SESSION = 200
+
+        const val APP_LANGUAGE_SYSTEM = "system"
+        const val APP_LANGUAGE_ZH = "zh"
+        const val APP_LANGUAGE_EN = "en"
+
+        const val THEME_SYSTEM = "system"
+        const val THEME_LIGHT = "light"
+        const val THEME_DARK = "dark"
     }
 }

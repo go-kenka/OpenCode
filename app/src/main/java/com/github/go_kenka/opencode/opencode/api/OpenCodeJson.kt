@@ -141,7 +141,7 @@ object OpenCodeJson {
         val statusSummary = when {
             !directSummary.isNullOrBlank() -> directSummary
             !status.isNullOrBlank() -> status
-            clean is Boolean -> if (clean) "工作区干净" else "有未提交改动"
+            clean is Boolean -> if (clean) "Working tree clean" else "Uncommitted changes"
             else -> null
         }
         return OpenCodeVcsInfo(
@@ -153,7 +153,7 @@ object OpenCodeJson {
     fun parseFileStatusSummary(json: String): String? {
         if (json.isBlank()) return null
         val array = runCatching { JSONArray(json) }.getOrNull() ?: return null
-        if (array.length() == 0) return "工作区干净"
+        if (array.length() == 0) return "Working tree clean"
         var added = 0
         var modified = 0
         var deleted = 0
@@ -166,10 +166,10 @@ object OpenCodeJson {
             }
         }
         val parts = mutableListOf<String>()
-        if (added > 0) parts += "新增$added"
-        if (modified > 0) parts += "修改$modified"
-        if (deleted > 0) parts += "删除$deleted"
-        return if (parts.isNotEmpty()) parts.joinToString("，") else "有未提交改动"
+        if (added > 0) parts += "Added $added"
+        if (modified > 0) parts += "Modified $modified"
+        if (deleted > 0) parts += "Deleted $deleted"
+        return if (parts.isNotEmpty()) parts.joinToString(", ") else "Uncommitted changes"
     }
 
     fun parseMessage(json: String): OpenCodeChatMessage {

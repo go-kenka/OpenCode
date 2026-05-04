@@ -80,6 +80,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -90,6 +91,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import android.widget.Toast
+import androidx.compose.ui.tooling.preview.Preview
 import com.github.go_kenka.opencode.R
 import com.github.go_kenka.opencode.opencode.model.OpenCodeMode
 import com.github.go_kenka.opencode.opencode.model.OpenCodeModelOption
@@ -131,7 +133,7 @@ private fun openCodeColors(): OpenCodeColors {
     val palette = tokens.palette
     return OpenCodeColors(
         bg = palette.background,
-        chatPanelBg = Color(0xFFF3F4F6),
+        chatPanelBg = palette.surfaceInteractive,
         line = palette.borderTertiary,
         panel = palette.surface,
         panelAlt = palette.surfaceInteractive,
@@ -230,7 +232,7 @@ fun OpenCodeConversationScreen(
                     )
                 } else if (uiState.messages.isEmpty()) {
                     EmptyConversationState(
-                        projectName = uiState.selectedProject?.name ?: "构建任何东西",
+                        projectName = uiState.selectedProject?.name ?: stringResource(R.string.oc_build_anything),
                         projectPath = uiState.selectedProject?.directory ?: "/",
                         gitBranch = uiState.selectedProject?.gitBranch,
                         gitStatusSummary = uiState.selectedProject?.gitStatusSummary,
@@ -286,7 +288,7 @@ fun OpenCodeConversationScreen(
 
         if (showServicePicker && discoveredServices.size > 1) {
             ServicePickerSheet(
-                title = "发现多个服务器",
+                title = stringResource(R.string.oc_found_multiple_servers),
                 services = discoveredServices,
                 selectedService = uiState.service,
                 onSelect = onDiscoveredServiceSelected,
@@ -313,7 +315,7 @@ private fun TodoStatusBar(
     val typography = tokens.typography
     val done = todos.count { it.done }
     val total = todos.size
-    val latest = todos.lastOrNull()?.text ?: "暂无待办"
+    val latest = todos.lastOrNull()?.text ?: stringResource(R.string.oc_no_todo)
     val capsuleShape = RoundedCornerShape(50)
     Box(
         modifier = Modifier
@@ -371,7 +373,7 @@ private fun TodoDialog(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "完整 TODO",
+                    text = stringResource(R.string.oc_full_todo),
                     color = colors.textPrimary,
                     fontSize = typography.base,
                     fontWeight = FontWeight.Medium,
@@ -380,7 +382,7 @@ private fun TodoDialog(
             }
             HorizontalDivider(color = colors.line)
             if (todos.isEmpty()) {
-                Text("暂无 TODO", color = colors.textSecondary, fontSize = typography.small)
+                Text(stringResource(R.string.oc_no_todo), color = colors.textSecondary, fontSize = typography.small)
             } else {
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 420.dp),
@@ -434,7 +436,7 @@ private fun PermissionRequestCard(
         verticalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
         Text(
-            text = "权限请求",
+            text = stringResource(R.string.oc_permission_request),
             color = colors.warning,
             fontSize = typography.small,
             fontWeight = FontWeight.Medium,
@@ -446,19 +448,19 @@ private fun PermissionRequestCard(
         )
         Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
             PermissionActionButton(
-                label = "拒绝",
+                label = stringResource(R.string.oc_deny),
                 enabled = !isLoading,
                 color = colors.danger,
                 onClick = onDeny,
             )
             PermissionActionButton(
-                label = "仅这次",
+                label = stringResource(R.string.oc_allow_once),
                 enabled = !isLoading,
                 color = colors.accent,
                 onClick = onAllowOnce,
             )
             PermissionActionButton(
-                label = "始终允许",
+                label = stringResource(R.string.oc_allow_always),
                 enabled = !isLoading,
                 color = colors.accent,
                 onClick = onAllowAlways,
@@ -533,13 +535,13 @@ private fun EmptyConversationState(
                 Text("⎇", color = colors.textSecondary, fontSize = typography.base)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    gitBranch?.ifBlank { "未知分支" } ?: "未知分支",
+                    gitBranch?.ifBlank { stringResource(R.string.oc_unknown_branch) } ?: stringResource(R.string.oc_unknown_branch),
                     color = colors.textSecondary,
                     fontSize = typography.base,
                 )
             }
             Text(
-                text = gitStatusSummary?.ifBlank { "Git 状态未知" } ?: "Git 状态未知",
+                text = gitStatusSummary?.ifBlank { stringResource(R.string.oc_git_status_unknown) } ?: stringResource(R.string.oc_git_status_unknown),
                 color = colors.textSecondary,
                 fontSize = typography.base,
             )
@@ -558,7 +560,7 @@ private fun HistoryLoadingState(modifier: Modifier = Modifier) {
     ) {
         Spacer(Modifier.height(tokens.spacing.sm))
         Text(
-            text = "正在加载历史消息...",
+            text = stringResource(R.string.oc_loading_history),
             color = colors.textSecondary,
             fontSize = tokens.typography.small,
         )
@@ -601,7 +603,7 @@ private fun TopCommandBar(
     var editingService by remember { mutableStateOf<OpenCodeService?>(null) }
     var deleteServer by remember { mutableStateOf<OpenCodeService?>(null) }
     val selectedProject = uiState.selectedProject
-    val projectName = selectedProject?.name ?: "选择项目"
+    val projectName = selectedProject?.name ?: stringResource(R.string.oc_select_project)
     val isConnected = uiState.service != null && !uiState.isConnecting && uiState.errorMessage == null
     val connectedColor = Color(0xFF1DB954)
     val disconnectedColor = Color(0xFFFF3B30)
@@ -678,7 +680,7 @@ private fun TopCommandBar(
             Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_settings),
-                    contentDescription = "服务器设置",
+                    contentDescription = stringResource(R.string.oc_server_settings),
                     tint = colors.textPrimary,
                     modifier = Modifier.size(16.dp),
                 )
@@ -701,7 +703,7 @@ private fun TopCommandBar(
             contentColor = colors.textPrimary,
         ) {
             Text(
-                text = "选择项目",
+                text = stringResource(R.string.oc_select_project),
                 color = colors.textPrimary,
                 fontSize = typography.large,
                 fontWeight = FontWeight.Medium,
@@ -747,7 +749,7 @@ private fun TopCommandBar(
                             )
                             if (project.isLocalOnly) {
                                 Text(
-                                    text = "本地项目",
+                                    text = stringResource(R.string.oc_local_project),
                                     color = colors.accent,
                                     fontSize = typography.small,
                                 )
@@ -768,7 +770,7 @@ private fun TopCommandBar(
                             .padding(horizontal = spacing.md, vertical = spacing.md),
                     ) {
                         Text(
-                            text = "+ 添加项目",
+                            text = stringResource(R.string.oc_add_project),
                             color = colors.accent,
                             fontSize = typography.base,
                             fontWeight = FontWeight.Medium,
@@ -783,18 +785,18 @@ private fun TopCommandBar(
     deleteConfirmProjectDirectory?.let { directory ->
         AlertDialog(
             onDismissRequest = { deleteConfirmProjectDirectory = null },
-            title = { Text("删除项目") },
-            text = { Text("确认删除该项目吗？\n$directory") },
+            title = { Text(stringResource(R.string.oc_delete_project)) },
+            text = { Text(stringResource(R.string.oc_confirm_delete_project, directory)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         onProjectDeleteConfirmed(directory)
                         deleteConfirmProjectDirectory = null
                     },
-                ) { Text("确认") }
+                ) { Text(stringResource(R.string.oc_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { deleteConfirmProjectDirectory = null }) { Text("取消") }
+                TextButton(onClick = { deleteConfirmProjectDirectory = null }) { Text(stringResource(R.string.oc_cancel)) }
             },
         )
     }
@@ -806,14 +808,14 @@ private fun TopCommandBar(
             contentColor = colors.textPrimary,
         ) {
             Text(
-                text = "添加本地项目",
+                text = stringResource(R.string.oc_add_local_project),
                 color = colors.textPrimary,
                 fontSize = typography.large,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.md),
             )
             Text(
-                text = "当前目录: ${uiState.projectPickerCurrentDirectory ?: "-"}",
+                text = stringResource(R.string.oc_current_directory, uiState.projectPickerCurrentDirectory ?: "-"),
                 color = colors.textSecondary,
                 fontSize = typography.small,
                 modifier = Modifier.padding(horizontal = spacing.lg),
@@ -836,7 +838,7 @@ private fun TopCommandBar(
                 decorationBox = { inner ->
                     if (uiState.projectPickerQuery.isBlank()) {
                         Text(
-                            text = "搜索目录（query）",
+                            text = stringResource(R.string.oc_search_directory),
                             color = colors.textSecondary,
                             fontSize = typography.small,
                         )
@@ -857,7 +859,7 @@ private fun TopCommandBar(
                         .clickable(onClick = onAddProjectDirectoryUp)
                         .padding(horizontal = spacing.md, vertical = spacing.sm),
                 ) {
-                    Text("上级目录", color = colors.textPrimary, fontSize = typography.small)
+                    Text(stringResource(R.string.oc_parent_directory), color = colors.textPrimary, fontSize = typography.small)
                 }
                 Row(
                     modifier = Modifier
@@ -867,7 +869,7 @@ private fun TopCommandBar(
                         .clickable(onClick = onAddProjectConfirm)
                         .padding(horizontal = spacing.md, vertical = spacing.sm),
                 ) {
-                    Text("添加当前目录（本地）", color = colors.accent, fontSize = typography.small)
+                    Text(stringResource(R.string.oc_add_current_directory), color = colors.accent, fontSize = typography.small)
                 }
             }
             uiState.projectPickerErrorMessage?.let { message ->
@@ -880,7 +882,7 @@ private fun TopCommandBar(
             }
             if (uiState.isProjectPickerLoading) {
                 Text(
-                    text = "目录加载中...",
+                    text = stringResource(R.string.oc_loading_directories),
                     color = colors.textSecondary,
                     fontSize = typography.small,
                     modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.md),
@@ -933,7 +935,7 @@ private fun TopCommandBar(
             contentColor = colors.textPrimary,
         ) {
             Text(
-                text = "服务器状态",
+                text = stringResource(R.string.oc_server_status),
                 color = colors.textPrimary,
                 fontSize = typography.large,
                 fontWeight = FontWeight.Medium,
@@ -941,14 +943,14 @@ private fun TopCommandBar(
             )
             val currentService = uiState.service
             Text(
-                text = "当前: ${currentService?.baseUrl ?: "未连接"}",
+                text = stringResource(R.string.oc_current_server, currentService?.baseUrl ?: stringResource(R.string.oc_not_connected)),
                 color = colors.textPrimary,
                 fontSize = typography.base,
                 modifier = Modifier.padding(horizontal = spacing.lg),
             )
             uiState.healthVersion?.let { version ->
                 Text(
-                    text = "版本: $version",
+                    text = stringResource(R.string.oc_version, version),
                     color = colors.textSecondary,
                     fontSize = typography.small,
                     modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.xs),
@@ -969,7 +971,7 @@ private fun TopCommandBar(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = if (isConnected) "连接正常" else "无法连接",
+                    text = if (isConnected) stringResource(R.string.oc_connected) else stringResource(R.string.oc_disconnected),
                     color = statusColor,
                     fontSize = typography.small,
                     fontWeight = FontWeight.Medium,
@@ -986,7 +988,7 @@ private fun TopCommandBar(
                     }
                     .padding(horizontal = spacing.md, vertical = spacing.sm),
             ) {
-                Text("重新发现服务", color = colors.textPrimary, fontSize = typography.small)
+                Text(stringResource(R.string.oc_rediscover_service), color = colors.textPrimary, fontSize = typography.small)
             }
             Text(
                 text = uiState.discoveryStatus,
@@ -997,7 +999,7 @@ private fun TopCommandBar(
 
             HorizontalDivider(color = colors.line, modifier = Modifier.padding(vertical = 10.dp))
             Text(
-                text = "可用服务器",
+                text = stringResource(R.string.oc_available_servers),
                 color = colors.textSecondary,
                 fontSize = typography.small,
                 fontWeight = FontWeight.Medium,
@@ -1014,7 +1016,7 @@ private fun TopCommandBar(
                     }
                     .padding(horizontal = spacing.md, vertical = spacing.sm),
             ) {
-                Text("添加服务器", color = colors.accent, fontSize = typography.small)
+                Text(stringResource(R.string.oc_add_server), color = colors.accent, fontSize = typography.small)
             }
             LazyColumn(
                 modifier = Modifier
@@ -1054,14 +1056,14 @@ private fun TopCommandBar(
                             )
                             if (!service.username.isNullOrBlank()) {
                                 Text(
-                                    text = "用户: ${service.username}",
+                                    text = stringResource(R.string.oc_user_label, service.username.orEmpty()),
                                     color = colors.textSecondary,
                                     fontSize = typography.small,
                                 )
                             }
                         }
                         Text(
-                            text = "编辑",
+                            text = stringResource(R.string.oc_edit),
                             color = colors.accent,
                             fontSize = typography.small,
                             modifier = Modifier
@@ -1069,13 +1071,13 @@ private fun TopCommandBar(
                                 .clickable { editingService = service },
                         )
                         Text(
-                            text = "删除",
+                            text = stringResource(R.string.oc_delete),
                             color = colors.danger,
                             fontSize = typography.small,
                             modifier = Modifier.clickable { deleteServer = service },
                         )
                         if (isCurrent) {
-                            Text("当前", color = colors.accent, fontSize = typography.small, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.oc_current), color = colors.accent, fontSize = typography.small, fontWeight = FontWeight.Medium)
                         }
                     }
                     HorizontalDivider(color = colors.line)
@@ -1088,18 +1090,18 @@ private fun TopCommandBar(
     deleteServer?.let { service ->
         AlertDialog(
             onDismissRequest = { deleteServer = null },
-            title = { Text("删除服务器") },
-            text = { Text("确认删除 ${service.baseUrl} ?") },
+            title = { Text(stringResource(R.string.oc_delete_server)) },
+            text = { Text(stringResource(R.string.oc_confirm_delete_server, service.baseUrl)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         onManualServerDelete(service)
                         deleteServer = null
                     },
-                ) { Text("确认") }
+                ) { Text(stringResource(R.string.oc_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { deleteServer = null }) { Text("取消") }
+                TextButton(onClick = { deleteServer = null }) { Text(stringResource(R.string.oc_cancel)) }
             },
         )
     }
@@ -1136,32 +1138,32 @@ private fun ServerEditorDialog(
         containerColor = colors.panel,
         titleContentColor = colors.textPrimary,
         textContentColor = colors.textPrimary,
-        title = { Text(if (originalKey == null) "添加服务器" else "编辑服务器") },
+        title = { Text(if (originalKey == null) stringResource(R.string.oc_add_server) else stringResource(R.string.oc_edit_server)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
                 ServerEditorTextField(
                     value = serverUrl,
                     onValueChange = { serverUrl = it },
-                    label = "服务器 URL",
+                    label = stringResource(R.string.oc_server_url),
                     placeholder = "http://localhost:4096",
                 )
                 ServerEditorTextField(
                     value = serverName,
                     onValueChange = { serverName = it },
-                    label = "服务器名称（可选）",
+                    label = stringResource(R.string.oc_server_name_optional),
                     placeholder = "Localhost",
                 )
                 ServerEditorTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = "用户名（可选）",
+                    label = stringResource(R.string.oc_username_optional),
                     placeholder = "opencode",
                 )
                 ServerEditorTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = "密码（可选）",
-                    placeholder = "请输入密码",
+                    label = stringResource(R.string.oc_password_optional),
+                    placeholder = stringResource(R.string.oc_enter_password),
                     visualTransformation = PasswordVisualTransformation(),
                 )
             }
@@ -1181,9 +1183,9 @@ private fun ServerEditorDialog(
                         originalKey,
                     )
                 }
-            }) { Text("保存", color = colors.accent) }
+            }) { Text(stringResource(R.string.oc_save), color = colors.accent) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消", color = colors.textSecondary) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.oc_cancel), color = colors.textSecondary) } },
     )
 }
 
@@ -1301,7 +1303,7 @@ private fun ServicePickerSheet(
                         )
                     }
                     if (selected) {
-                        Text("当前", color = colors.accent, fontSize = typography.small)
+                        Text(stringResource(R.string.oc_current), color = colors.accent, fontSize = typography.small)
                     }
                 }
                 HorizontalDivider(color = colors.line)
@@ -1391,7 +1393,7 @@ private fun AssistantCard(
 }
 
 @Composable
-private fun AssistantTypingBubble(label: String = "深度思考中") {
+private fun AssistantTypingBubble(label: String = "") {
     val colors = openCodeColors()
     val tokens = opencodeTokens()
     Row(
@@ -1403,7 +1405,7 @@ private fun AssistantTypingBubble(label: String = "深度思考中") {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = label,
+            text = if (label.isBlank()) stringResource(R.string.oc_thinking_in_depth) else label,
             color = colors.textSecondary,
             fontSize = tokens.typography.small,
             fontWeight = FontWeight.Medium,
@@ -1451,7 +1453,7 @@ private fun UserCard(content: String, time: Long) {
         }
         Spacer(Modifier.width(8.dp))
         ChatAvatar(
-            label = "我",
+            label = stringResource(R.string.author_me),
             background = colors.panelAlt,
             contentColor = colors.textSecondary,
         )
@@ -1542,7 +1544,7 @@ private fun AssistantEnhancedCard(
             )
             Spacer(Modifier.width(tokens.spacing.xs))
         Text(
-            text = if (isError) "运行错误" else "助手响应",
+            text = if (isError) stringResource(R.string.oc_runtime_error) else stringResource(R.string.oc_assistant_response),
             color = colors.textSecondary,
             fontSize = typography.small,
             fontWeight = FontWeight.Medium,
@@ -1620,14 +1622,14 @@ private fun ReasoningCard(
             )
             Spacer(Modifier.width(tokens.spacing.xs))
             Text(
-                text = "深度思考",
+                text = stringResource(R.string.oc_deep_thinking),
                 color = colors.textSecondary,
                 fontSize = tokens.typography.small,
                 fontWeight = FontWeight.Medium,
             )
             Spacer(Modifier.width(tokens.spacing.xs))
             Text(
-                text = if (reasoningCompleted) "已完成" else "思考中",
+                text = if (reasoningCompleted) stringResource(R.string.oc_completed) else stringResource(R.string.oc_thinking),
                 color = colors.textSecondary,
                 fontSize = tokens.typography.small,
             )
@@ -1653,7 +1655,7 @@ private fun rememberRawCopyAction(): (String) -> Unit {
     return remember(clipboard, context) {
         { raw ->
             clipboard.setText(AnnotatedString(raw))
-            Toast.makeText(context, "已复制原文", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.oc_copied_raw), Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -1896,7 +1898,7 @@ private fun ComposerBar(
                     optionLabel = { it.label },
                     onSelected = onModeSelected,
                     useBottomSheet = true,
-                    sheetTitle = "选择Agent",
+                    sheetTitle = stringResource(R.string.oc_select_agent),
                 )
                 Spacer(Modifier.width(spacing.sm))
                 SelectionChip(
@@ -1906,7 +1908,7 @@ private fun ComposerBar(
                     onSelected = onModelSelected,
                     groupLabel = { it.providerName ?: it.providerID ?: "Other" },
                     useBottomSheet = true,
-                    sheetTitle = "选择模型",
+                    sheetTitle = stringResource(R.string.oc_select_model),
                     modifier = Modifier.widthIn(max = 170.dp),
                 )
             }
@@ -1942,7 +1944,7 @@ private fun ComposerBar(
                     decorationBox = { inner ->
                         Box(contentAlignment = Alignment.TopStart) {
                             if (text.isBlank()) {
-                                Text("随便问点什么...", color = colors.textSecondary, fontSize = typography.base)
+                                Text(stringResource(R.string.oc_ask_anything), color = colors.textSecondary, fontSize = typography.base)
                             }
                             inner()
                         }
@@ -2053,7 +2055,7 @@ private fun <T> SelectionChip(
     onSelected: (T) -> Unit,
     groupLabel: ((T) -> String)? = null,
     useBottomSheet: Boolean = false,
-    sheetTitle: String = "选择",
+    sheetTitle: String = "",
     modifier: Modifier = Modifier,
 ) {
     val colors = openCodeColors()
@@ -2122,7 +2124,7 @@ private fun <T> SelectionChip(
             contentColor = colors.textPrimary,
         ) {
             Text(
-                text = sheetTitle,
+                text = sheetTitle.ifBlank { stringResource(R.string.oc_select) },
                 color = colors.textPrimary,
                 fontSize = typography.large,
                 fontWeight = FontWeight.Medium,

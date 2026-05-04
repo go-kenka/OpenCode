@@ -20,6 +20,7 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.go_kenka.opencode.R
 import com.github.go_kenka.opencode.opencode.api.OpenCodeClient
 import com.github.go_kenka.opencode.opencode.discovery.NsdOpenCodeDiscovery
 import com.github.go_kenka.opencode.opencode.discovery.OpenCodeDiscovery
@@ -53,6 +54,9 @@ import kotlinx.coroutines.launch
 class OpencodeViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
+    private fun tr(resId: Int, vararg args: Any): String =
+        getApplication<Application>().getString(resId, *args)
+
     private val discovery: OpenCodeDiscovery = NsdOpenCodeDiscovery(application)
     private val client = OpenCodeClient()
     private val preferences = OpencodePreferences(application)
@@ -84,9 +88,9 @@ class OpencodeViewModel(
     fun markDiscoveryPermissionDenied() {
         _uiState.update {
             it.copy(
-                discoveryStatus = "缺少附近 Wi‑Fi 设备权限，无法通过 mDNS 自动发现 OpenCode 服务",
+                discoveryStatus = tr(R.string.ov_missing_nearby_permission),
                 isConnecting = false,
-                errorMessage = "请授予附近设备权限后重试",
+                errorMessage = tr(R.string.ov_grant_permission_retry),
             )
         }
     }
@@ -98,7 +102,7 @@ class OpencodeViewModel(
         val manualServices = preferences.getManualServices()
         _uiState.value = OpenCodeUiState(
             discoveredServices = manualServices,
-            discoveryStatus = "正在重新发现 OpenCode 服务...",
+            discoveryStatus = tr(R.string.ov_rediscovering_service),
             isConnecting = true,
         )
         discovery.stop()
@@ -156,8 +160,8 @@ class OpencodeViewModel(
     }
 
     fun createNewSession() {
-        val service = _uiState.value.service ?: return appendError("尚未发现 OpenCode 服务")
-        val project = _uiState.value.selectedProject ?: return appendError("尚未选择项目")
+        val service = _uiState.value.service ?: return appendError(tr(R.string.ov_service_not_found))
+        val project = _uiState.value.selectedProject ?: return appendError(tr(R.string.ov_project_not_selected))
         viewModelScope.launch {
             _uiState.update { it.copy(isConnecting = true, isHistoryLoading = true, errorMessage = null) }
             runCatching {
@@ -187,7 +191,7 @@ class OpencodeViewModel(
                         selectedModel = restored.model,
                         isConnecting = false,
                         isHistoryLoading = false,
-                        discoveryStatus = "已创建新会话",
+                        discoveryStatus = tr(R.string.ov_new_session_created),
                         errorMessage = null,
                     )
                 }
@@ -197,7 +201,7 @@ class OpencodeViewModel(
                     it.copy(
                         isConnecting = false,
                         isHistoryLoading = false,
-                        errorMessage = "创建会话失败：${throwable.toFriendlyError()}",
+                        errorMessage = tr(R.string.ov_create_session_failed, throwable.toFriendlyError()),
                     )
                 }
             }
@@ -244,7 +248,7 @@ class OpencodeViewModel(
                         selectedModel = restored.model,
                         isConnecting = false,
                         isHistoryLoading = false,
-                        discoveryStatus = "已切换到 ${selected.name}",
+                        discoveryStatus = tr(R.string.ov_switched_to_project, selected.name),
                     )
                 }
                 persistCurrentSelection()
@@ -253,7 +257,7 @@ class OpencodeViewModel(
                     it.copy(
                         isConnecting = false,
                         isHistoryLoading = false,
-                        errorMessage = "项目切换失败：${throwable.message ?: "未知错误"}",
+                        errorMessage = tr(R.string.ov_switch_project_failed, throwable.message ?: tr(R.string.ov_unknown_error)),
                     )
                 }
             }
@@ -282,14 +286,14 @@ class OpencodeViewModel(
                 recentSessions = sessionsForProject(nextSelected),
                 messages = if (nextSelected == null) emptyList() else it.messages,
                 todos = currentTodosForProject(nextSelected),
-                discoveryStatus = "已删除项目",
+                discoveryStatus = tr(R.string.ov_project_deleted),
             )
         }
         persistCurrentSelection()
     }
 
     fun showAddProjectPicker() {
-        val service = _uiState.value.service ?: return appendError("尚未发现 OpenCode 服务")
+        val service = _uiState.value.service ?: return appendError(tr(R.string.ov_service_not_found))
         _uiState.update {
             it.copy(
                 isProjectPickerVisible = true,
@@ -303,7 +307,7 @@ class OpencodeViewModel(
         viewModelScope.launch {
             runCatching {
                 val roots = client.listPathRoots(service.baseUrl)
-                val root = roots.firstOrNull() ?: error("未获取到可用目录")
+                val root = roots.firstOrNull() ?: error(tr(R.string.ov_no_available_directory))
                 var selectedRoot = root
                 var directories: List<OpenCodeDirectoryEntry> = emptyList()
                 for (candidate in roots) {
@@ -334,7 +338,7 @@ class OpencodeViewModel(
                 _uiState.update {
                     it.copy(
                         isProjectPickerLoading = false,
-                        projectPickerErrorMessage = "加载目录失败：${throwable.toFriendlyError()}",
+                        projectPickerErrorMessage = tr(R.string.ov_load_directory_failed, throwable.toFriendlyError()),
                     )
                 }
             }
@@ -395,8 +399,8 @@ class OpencodeViewModel(
     }
 
     fun addProjectFromCurrentDirectory() {
-        val service = _uiState.value.service ?: return appendError("尚未发现 OpenCode 服务")
-        val directory = normalizeDirectory(_uiState.value.projectPickerCurrentDirectory ?: return appendError("目录为空，无法添加项目"))
+        val service = _uiState.value.service ?: return appendError(tr(R.string.ov_service_not_found))
+        val directory = normalizeDirectory(_uiState.value.projectPickerCurrentDirectory ?: return appendError(tr(R.string.ov_empty_directory)))
         val projectName = directory.substringAfterLast('/').ifBlank { directory }
         val localProject = OpenCodeProject(
             id = localProjectId(directory),
@@ -418,7 +422,7 @@ class OpencodeViewModel(
                 isProjectPickerVisible = false,
                 isProjectPickerLoading = false,
                 projectPickerErrorMessage = null,
-                discoveryStatus = "已添加本地项目：$projectName",
+                discoveryStatus = tr(R.string.ov_local_project_added, projectName),
             )
         }
         persistCurrentSelection()
@@ -449,7 +453,7 @@ class OpencodeViewModel(
             _uiState.update {
                 it.copy(
                     isProjectPickerLoading = false,
-                    projectPickerErrorMessage = "打开目录失败：${throwable.toFriendlyError()}",
+                    projectPickerErrorMessage = tr(R.string.ov_open_directory_failed, throwable.toFriendlyError()),
                 )
             }
         }
@@ -491,7 +495,7 @@ class OpencodeViewModel(
                         isConnecting = false,
                         isHistoryLoading = false,
                         errorMessage = null,
-                        discoveryStatus = "已切换会话",
+                        discoveryStatus = tr(R.string.ov_session_switched),
                     )
                 }
                 persistCurrentSelection()
@@ -501,7 +505,7 @@ class OpencodeViewModel(
                     it.copy(
                         isConnecting = false,
                         isHistoryLoading = false,
-                        errorMessage = "会话切换失败：$friendly",
+                        errorMessage = tr(R.string.ov_switch_session_failed, friendly),
                     )
                 }
             }
@@ -533,8 +537,8 @@ class OpencodeViewModel(
         }
 
         val state = _uiState.value
-        val service = state.service ?: return appendError("尚未发现 OpenCode 服务")
-        val project = state.selectedProject ?: return appendError("尚未选择项目")
+        val service = state.service ?: return appendError(tr(R.string.ov_service_not_found))
+        val project = state.selectedProject ?: return appendError(tr(R.string.ov_project_not_selected))
 
         val userMessage = OpenCodeChatMessage(
             id = UUID.randomUUID().toString(),
@@ -686,7 +690,7 @@ class OpencodeViewModel(
                             it.copy(
                                 messages = it.messages.map { message ->
                                     if (message.id == assistantPlaceholder.id) {
-                                        message.copy(content = "已终止", isError = false)
+                                        message.copy(content = tr(R.string.ov_terminated), isError = false)
                                     } else {
                                         message
                                     }
@@ -705,7 +709,7 @@ class OpencodeViewModel(
                         it.copy(
                             messages = it.messages.map { message ->
                                 if (message.id == assistantPlaceholder.id) {
-                                    message.copy(content = "发送失败：$friendly", isError = true)
+                                    message.copy(content = tr(R.string.ov_send_failed, friendly), isError = true)
                                 } else {
                                     message
                                 }
@@ -751,7 +755,7 @@ class OpencodeViewModel(
                 sendingSessionId = null
                 sendJob = null
             }.onFailure { throwable ->
-                appendError("终止会话失败：${throwable.toFriendlyError()}")
+                appendError(tr(R.string.ov_terminate_session_failed, throwable.toFriendlyError()))
                 sendJob?.cancel()
                 _uiState.update { it.copy(isSending = false) }
                 sendingSessionId = null
@@ -786,7 +790,7 @@ class OpencodeViewModel(
                 _uiState.update {
                     it.copy(
                         isRespondingPermission = false,
-                        errorMessage = "权限响应失败：${throwable.toFriendlyError()}",
+                        errorMessage = tr(R.string.ov_permission_response_failed, throwable.toFriendlyError()),
                     )
                 }
             }
@@ -805,12 +809,12 @@ class OpencodeViewModel(
             discovery.state.collectLatest { state ->
                 when (state) {
                     OpenCodeDiscoveryState.Idle -> _uiState.update {
-                        it.copy(discoveryStatus = "尚未开始搜索 OpenCode 服务", isConnecting = false)
+                        it.copy(discoveryStatus = tr(R.string.ov_search_not_started), isConnecting = false)
                     }
 
                     OpenCodeDiscoveryState.Searching -> _uiState.update {
                         it.copy(
-                            discoveryStatus = "正在通过 mDNS 搜索 OpenCode 服务...",
+                            discoveryStatus = tr(R.string.ov_searching_mdns),
                             isConnecting = true,
                             errorMessage = null,
                         )
@@ -856,7 +860,7 @@ class OpencodeViewModel(
             it.copy(
                 pendingServiceSelection = true,
                 pendingService = it.pendingService ?: services.first(),
-                discoveryStatus = "发现多个 OpenCode 服务，请先选择",
+                discoveryStatus = tr(R.string.ov_found_multiple_services_select_first),
                 isConnecting = false,
             )
         }
@@ -871,7 +875,7 @@ class OpencodeViewModel(
                 it.copy(
                     service = service,
                     discoveredServices = (it.discoveredServices + service).distinctBy { s -> s.key() },
-                    discoveryStatus = "已发现 ${service.serviceName}，正在连接...",
+                    discoveryStatus = tr(R.string.ov_found_service_connecting, service.serviceName),
                     pendingServiceSelection = false,
                     pendingService = null,
                     isConnecting = true,
@@ -883,7 +887,7 @@ class OpencodeViewModel(
             runCatching {
                 client.setBasicAuth(service.username, service.password)
                 val health = client.health(service.baseUrl)
-                if (!health.healthy) error("OpenCode 服务健康检查失败")
+                if (!health.healthy) error(tr(R.string.ov_health_check_failed))
                 sessions = client.listSessions(service.baseUrl)
                 val sessionProjects = OpenCodeProject.fromSessions(sessions).map { it.copy(isLocalOnly = true) }
                 val savedLocalProjects = preferences.getLocalProjects(service.key())
@@ -933,7 +937,7 @@ class OpencodeViewModel(
                         selectedModel = data.selection.model,
                         selectedThinkingLevel = data.selection.thinkingLevel,
                         healthVersion = data.healthVersion,
-                        discoveryStatus = "已连接 ${service.serviceName}",
+                        discoveryStatus = tr(R.string.ov_connected_service, service.serviceName),
                         isConnecting = false,
                         isHistoryLoading = false,
                         errorMessage = null,
@@ -943,7 +947,7 @@ class OpencodeViewModel(
             }.onFailure { throwable ->
                 _uiState.update {
                     it.copy(
-                        discoveryStatus = "OpenCode 服务连接失败",
+                        discoveryStatus = tr(R.string.ov_service_connect_failed),
                         isConnecting = false,
                         isHistoryLoading = false,
                         errorMessage = throwable.toFriendlyError(),
@@ -1215,11 +1219,11 @@ class OpencodeViewModel(
 
     private fun Throwable.toFriendlyError(): String {
         return when (this) {
-            is SocketTimeoutException -> "请求超时（服务响应时间过长）"
-            is InterruptedIOException -> "请求被中断或超时"
-            is ConnectException -> "连接失败（无法连接到 OpenCode 服务）"
-            is UnknownHostException -> "无法解析服务地址，请检查主机 IP"
-            else -> message ?: "未知错误"
+            is SocketTimeoutException -> tr(R.string.ov_error_timeout)
+            is InterruptedIOException -> tr(R.string.ov_error_interrupted)
+            is ConnectException -> tr(R.string.ov_error_connect_failed)
+            is UnknownHostException -> tr(R.string.ov_error_unknown_host)
+            else -> message ?: tr(R.string.ov_unknown_error)
         }
     }
 
