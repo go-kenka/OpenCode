@@ -60,7 +60,9 @@ object OpenCodeJson {
             val normalized = id.lowercase()
             if (normalized in listOf("compaction", "summary", "title")) return
             val display = label?.trim().takeUnless { it.isNullOrBlank() } ?: id
-            result.putIfAbsent(normalized, OpenCodeMode(agent = id, label = display))
+            if (!result.containsKey(normalized)) {
+                result[normalized] = OpenCodeMode(agent = id, label = display)
+            }
         }
 
         fun parseAgentObject(obj: JSONObject) {

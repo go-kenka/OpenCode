@@ -62,7 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.github.go_kenka.opencode.R
-import com.github.go_kenka.opencode.conversation.OpenCodeTestTags
+import com.github.go_kenka.opencode.conversation.ConversationTestTags
 import com.github.go_kenka.opencode.opencode.model.OpenCodeSession
 import com.github.go_kenka.opencode.theme.OpenCodeTheme
 import com.github.go_kenka.opencode.theme.opencodeTokens
@@ -109,7 +109,7 @@ fun OpenCodeDrawerContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = drawerContentHorizontalInset, vertical = spacing.xs)
-                .testTag(OpenCodeTestTags.DrawerSearch),
+                .testTag(ConversationTestTags.DrawerSearch),
         )
 
         Box(

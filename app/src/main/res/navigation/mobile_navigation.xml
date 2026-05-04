@@ -25,13 +25,4 @@
         android:name="com.github.go_kenka.opencode.conversation.ConversationFragment"
         android:label="Conversation" />
 
-    <fragment
-        android:id="@+id/nav_profile"
-        android:name="com.github.go_kenka.opencode.profile.ProfileFragment"
-        android:label="Profile">
-        <argument
-            android:name="userId"
-            app:argType="string" />
-    </fragment>
-
 </navigation>

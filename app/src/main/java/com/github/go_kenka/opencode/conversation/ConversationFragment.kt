@@ -67,7 +67,7 @@ class ConversationFragment : Fragment() {
             setContent {
                 OpenCodeTheme(isDynamicColor = false) {
                     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
-                    OpenCodeConversationScreen(
+                    ConversationScreen(
                         uiState = uiState,
                         onProjectSelected = viewModel::selectProject,
                         onProjectDeleteConfirmed = viewModel::deleteProject,
@@ -95,9 +95,6 @@ class ConversationFragment : Fragment() {
                         onServerConfigClick = ::ensureDiscoveryPermission,
                         onManualServerSave = viewModel::saveManualService,
                         onManualServerDelete = viewModel::deleteManualService,
-                        onFileUploadClick = {
-                            // TODO: Wire file picker and upload flow.
-                        },
                         onRetryDiscovery = ::retryDiscoveryWithPermission,
                     )
                 }
